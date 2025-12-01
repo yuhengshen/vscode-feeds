@@ -1,7 +1,8 @@
 {
   "publisher": "yhs",
   "name": "vscode-feeds",
-  "displayName": "vscode-feeds",
+  "displayName": "VS Code Feeds - Twitter/X",
+  "description": "View Twitter/X feeds directly in VS Code with image, video support, comments, likes and bookmarks",
   "type": "module",
   "version": "0.0.1",
   "private": true,
@@ -18,17 +19,183 @@
   "contributes": {
     "commands": [
       {
-        "command": "vscode-feeds.helloWorld",
-        "title": "Hello World"
+        "command": "vscode-feeds.refreshTimeline",
+        "title": "Refresh Timeline",
+        "icon": "$(refresh)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.viewTweet",
+        "title": "View Tweet Details",
+        "icon": "$(eye)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.likeTweet",
+        "title": "Like Tweet",
+        "icon": "$(heart)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.unlikeTweet",
+        "title": "Unlike Tweet",
+        "icon": "$(heart-filled)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.bookmarkTweet",
+        "title": "Bookmark Tweet",
+        "icon": "$(bookmark)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.removeBookmark",
+        "title": "Remove Bookmark",
+        "icon": "$(bookmark-filled)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.openInBrowser",
+        "title": "Open in Browser",
+        "icon": "$(link-external)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.authenticate",
+        "title": "Authenticate with Twitter",
+        "icon": "$(key)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.logout",
+        "title": "Logout from Twitter",
+        "icon": "$(sign-out)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.loadMore",
+        "title": "Load More Tweets",
+        "icon": "$(arrow-down)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.switchToForYou",
+        "title": "Switch to For You",
+        "icon": "$(star)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.switchToFollowing",
+        "title": "Switch to Following",
+        "icon": "$(people)",
+        "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.toggleTimelineType",
+        "title": "Switch Timeline Type",
+        "icon": "$(list-filter)",
+        "category": "Twitter Feeds"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "twitter-feeds",
+          "title": "Twitter Feeds",
+          "icon": "$(twitter)"
+        }
+      ]
+    },
+    "views": {
+      "twitter-feeds": [
+        {
+          "id": "twitter-timeline",
+          "name": "Timeline",
+          "icon": "$(home)"
+        },
+        {
+          "id": "twitter-bookmarks",
+          "name": "Bookmarks",
+          "icon": "$(bookmark)"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "vscode-feeds.toggleTimelineType",
+          "when": "view == twitter-timeline",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-feeds.refreshTimeline",
+          "when": "view == twitter-timeline || view == twitter-bookmarks",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-feeds.authenticate",
+          "when": "view == twitter-timeline && !vscode-feeds.isAuthenticated"
+        },
+        {
+          "command": "vscode-feeds.logout",
+          "when": "view == twitter-timeline && vscode-feeds.isAuthenticated"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vscode-feeds.viewTweet",
+          "when": "view == twitter-timeline || view == twitter-bookmarks",
+          "group": "inline@1"
+        },
+        {
+          "command": "vscode-feeds.likeTweet",
+          "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem == tweet-unliked",
+          "group": "inline@2"
+        },
+        {
+          "command": "vscode-feeds.unlikeTweet",
+          "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem == tweet-liked",
+          "group": "inline@2"
+        },
+        {
+          "command": "vscode-feeds.bookmarkTweet",
+          "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem =~ /unbookmarked/",
+          "group": "inline@3"
+        },
+        {
+          "command": "vscode-feeds.removeBookmark",
+          "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem =~ /bookmarked/",
+          "group": "inline@3"
+        },
+        {
+          "command": "vscode-feeds.openInBrowser",
+          "when": "view == twitter-timeline || view == twitter-bookmarks",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
-      "title": "vscode-feeds",
+      "title": "X (Twitter) Feeds",
       "properties": {
-        "vscode-feeds.message": {
+        "vscode-feeds.twitter.ct0": {
           "type": "string",
-          "default": "Hello World",
-          "description": "The message to show in the notification"
+          "default": "",
+          "description": "X Web ct0 Cookie (CSRF token) - Get from browser DevTools"
+        },
+        "vscode-feeds.twitter.authToken": {
+          "type": "string",
+          "default": "",
+          "description": "X Web auth_token Cookie - Get from browser DevTools"
+        },
+        "vscode-feeds.twitter.tweetsPerPage": {
+          "type": "number",
+          "default": 20,
+          "description": "Number of tweets to load per page"
+        },
+        "vscode-feeds.twitter.autoRefreshInterval": {
+          "type": "number",
+          "default": 0,
+          "description": "Auto refresh interval in minutes (0 to disable)"
         }
       }
     }
