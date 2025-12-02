@@ -171,8 +171,11 @@ export class XWebApiService {
   }
   /**
    * 获取主页时间线（For You）
+   * @param count 获取数量
+   * @param cursor 分页游标
+   * @param seenTweetIds 已读推文ID列表，用于过滤已显示的推文
    */
-  async getHomeTimeline(count: number = 20, cursor?: string): Promise<{ tweets: Tweet[], cursor?: string }> {
+  async getHomeTimeline(count: number = 20, cursor?: string, seenTweetIds?: string[]): Promise<{ tweets: Tweet[], cursor?: string }> {
     const variables: Record<string, unknown> = {
       count,
       includePromotedContent: false,
@@ -184,6 +187,11 @@ export class XWebApiService {
 
     if (cursor) {
       variables.cursor = cursor
+    }
+
+    // 传递已读推文ID，Twitter会过滤这些推文
+    if (seenTweetIds && seenTweetIds.length > 0) {
+      variables.seenTweetIds = seenTweetIds
     }
 
     const data = await this.graphqlRequest<{
@@ -216,8 +224,11 @@ export class XWebApiService {
 
   /**
    * 获取主页时间线（Following / Latest）
+   * @param count 获取数量
+   * @param cursor 分页游标
+   * @param seenTweetIds 已读推文ID列表，用于过滤已显示的推文
    */
-  async getHomeLatestTimeline(count: number = 20, cursor?: string): Promise<{ tweets: Tweet[], cursor?: string }> {
+  async getHomeLatestTimeline(count: number = 20, cursor?: string, seenTweetIds?: string[]): Promise<{ tweets: Tweet[], cursor?: string }> {
     const variables: Record<string, unknown> = {
       count,
       includePromotedContent: false,
@@ -227,6 +238,11 @@ export class XWebApiService {
 
     if (cursor) {
       variables.cursor = cursor
+    }
+
+    // 传递已读推文ID，Twitter会过滤这些推文
+    if (seenTweetIds && seenTweetIds.length > 0) {
+      variables.seenTweetIds = seenTweetIds
     }
 
     const data = await this.graphqlRequest<{

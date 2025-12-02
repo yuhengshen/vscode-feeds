@@ -128,6 +128,8 @@ export function useTimelineProvider(viewType: ViewType) {
   const error = ref<string | undefined>(undefined)
   const timelineType = ref<TimelineType>('forYou')
   const isAuthenticated = ref(xWebApi.isAuthenticated())
+  // 记录上一次请求返回的推文ID，用于告诉API过滤重复内容
+  const lastSeenTweetIds = ref<string[]>([])
 
   // Check auth status periodically
   const checkAuth = () => {
@@ -145,15 +147,17 @@ export function useTimelineProvider(viewType: ViewType) {
 
     try {
       let response: { tweets: Tweet[], cursor?: string }
+      // 传递上一次请求返回的推文ID
+      const seenIds = lastSeenTweetIds.value
 
       if (viewType === 'bookmarks') {
         response = await xWebApi.getBookmarks(20, paginationCursor)
       }
       else if (timelineType.value === 'following') {
-        response = await xWebApi.getHomeLatestTimeline(20, paginationCursor)
+        response = await xWebApi.getHomeLatestTimeline(20, paginationCursor, seenIds)
       }
       else {
-        response = await xWebApi.getHomeTimeline(20, paginationCursor)
+        response = await xWebApi.getHomeTimeline(20, paginationCursor, seenIds)
       }
 
       if (isLoadMore) {
@@ -164,6 +168,9 @@ export function useTimelineProvider(viewType: ViewType) {
         // 首次加载或刷新，直接替换
         tweets.value = response.tweets
       }
+
+      // 记录本次返回的推文ID，供下次请求使用
+      lastSeenTweetIds.value = response.tweets.map(t => t.id)
 
       // 更新 cursor
       if (response.cursor) {
