@@ -186,16 +186,6 @@
           "type": "string",
           "default": "",
           "description": "X Web auth_token Cookie - Get from browser DevTools"
-        },
-        "vscode-feeds.twitter.tweetsPerPage": {
-          "type": "number",
-          "default": 20,
-          "description": "Number of tweets to load per page"
-        },
-        "vscode-feeds.twitter.autoRefreshInterval": {
-          "type": "number",
-          "default": 0,
-          "description": "Auto refresh interval in minutes (0 to disable)"
         }
       }
     }
@@ -210,7 +200,7 @@
     "@types/node": "22.x",
     "@types/vscode": "^1.99.0",
     "reactive-vscode": "^0.4.1",
-    "tsdown": "^0.15.11",
+    "tsdown": "^0.16.8",
     "typescript": "^5.9.3"
   }
 }

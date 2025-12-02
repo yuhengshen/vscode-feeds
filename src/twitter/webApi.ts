@@ -141,7 +141,6 @@ export class XWebApiService {
     }
 
     logger.info(`X Web API Request: ${method} ${operationName}`)
-    logger.info(`URL: ${url}`)
 
     try {
       const response = await fetch(url, options)
@@ -170,29 +169,6 @@ export class XWebApiService {
       throw error
     }
   }
-
-  /**
-   * 获取当前用户ID
-   */
-  private async getCurrentUserId(): Promise<string> {
-    if (this.userId) {
-      return this.userId
-    }
-
-    // 从 API 获取当前用户信息
-    const response = await fetch(`${X_API_BASE}/1.1/account/verify_credentials.json`, {
-      headers: this.getHeaders(),
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to get current user')
-    }
-
-    const data = await response.json() as { id_str: string }
-    this.userId = data.id_str
-    return this.userId
-  }
-
   /**
    * 获取主页时间线（For You）
    */
