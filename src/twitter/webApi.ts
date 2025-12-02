@@ -177,7 +177,8 @@ export class XWebApiService {
       count,
       includePromotedContent: false,
       latestControlAvailable: true,
-      requestContext: 'launch',
+      // 有 cursor 时使用 'ptr' 表示刷新，否则使用 'launch' 表示首次加载
+      requestContext: cursor ? 'ptr' : 'launch',
       withCommunity: true,
     }
 
@@ -483,7 +484,7 @@ export class XWebApiService {
     }>
   }): { tweets: Tweet[], cursor?: string } {
     const tweets: Tweet[] = []
-    let nextCursor: string | undefined
+    let bottomCursor: string | undefined
 
     for (const instruction of timeline.instructions) {
       if (!instruction.entries)
@@ -492,7 +493,10 @@ export class XWebApiService {
       for (const entry of instruction.entries) {
         // 获取游标
         if (entry.entryId.startsWith('cursor-bottom')) {
-          nextCursor = entry.content.value
+          bottomCursor = entry.content.value
+          continue
+        }
+        if (entry.entryId.startsWith('cursor-top')) {
           continue
         }
 
@@ -508,7 +512,7 @@ export class XWebApiService {
 
     return {
       tweets,
-      cursor: nextCursor,
+      cursor: bottomCursor,
     }
   }
 

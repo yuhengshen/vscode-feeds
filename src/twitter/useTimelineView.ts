@@ -134,7 +134,7 @@ export function useTimelineProvider(viewType: ViewType) {
     isAuthenticated.value = xWebApi.isAuthenticated()
   }
 
-  async function fetchTweets(paginationCursor?: string): Promise<void> {
+  async function fetchTweets(paginationCursor?: string, isLoadMore: boolean = false): Promise<void> {
     if (loading.value) return
 
     checkAuth()
@@ -156,16 +156,19 @@ export function useTimelineProvider(viewType: ViewType) {
         response = await xWebApi.getHomeTimeline(20, paginationCursor)
       }
 
-      if (paginationCursor) {
-        // Append to existing tweets
+      if (isLoadMore) {
+        // 加载更多时，追加到后面
         tweets.value = [...tweets.value, ...response.tweets]
       }
       else {
-        // Replace tweets
+        // 首次加载或刷新，直接替换
         tweets.value = response.tweets
       }
 
-      cursor.value = response.cursor
+      // 更新 cursor
+      if (response.cursor) {
+        cursor.value = response.cursor
+      }
     }
     catch (e) {
       logger.error(`Failed to fetch ${viewType}:`, e)
@@ -177,17 +180,15 @@ export function useTimelineProvider(viewType: ViewType) {
   }
 
   function refresh(): void {
-    tweets.value = []
-    cursor.value = undefined
     error.value = undefined
     checkAuth()
-    // Trigger fetch on next tick
-    fetchTweets()
+    // 刷新时传递当前 cursor，但替换内容而不是拼接
+    fetchTweets(cursor.value, false)
   }
 
   async function loadMore(): Promise<void> {
     if (loading.value || !cursor.value) return
-    await fetchTweets(cursor.value)
+    await fetchTweets(cursor.value, true)
   }
 
   function setTimelineType(type: TimelineType): void {

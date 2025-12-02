@@ -684,18 +684,16 @@ export function useTweetDetailPanel() {
   }
 
   async function show(tweet: Tweet): Promise<void> {
-    const column = ViewColumn.Beside
-
     // If panel exists, reveal it
     if (panel.value) {
-      panel.value.reveal(column)
+      panel.value.reveal()
     }
     else {
       // Create new panel
       const newPanel = window.createWebviewPanel(
         'tweetDetail',
         `Tweet by @${tweet.author?.username || 'unknown'}`,
-        column,
+        ViewColumn.Beside,
         {
           enableScripts: true,
           retainContextWhenHidden: true,
