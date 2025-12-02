@@ -4,7 +4,8 @@
   "displayName": "VS Code Feeds - Twitter/X",
   "description": "View Twitter/X feeds directly in VS Code with image, video support, comments, likes and bookmarks",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "icon": "icons.png",
   "categories": [
     "Other"
   ],

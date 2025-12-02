@@ -9,6 +9,6 @@
 ## Usage
 
 - Open the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P`)
-- Search for commands related to `vscode-feeds`
+- Search for commands related to `twitter feeds`
 - Follow the prompts to connect and view your feeds
 
