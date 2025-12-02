@@ -1,5 +1,5 @@
 import { defineExtension, useCommand, watchEffect } from 'reactive-vscode'
-import { commands, env, ExtensionContext, Uri, window } from 'vscode'
+import { commands, env, Uri, window } from 'vscode'
 import {
   ct0,
   authToken,
@@ -8,12 +8,16 @@ import { logger } from './utils'
 import {
   xWebApi,
   TweetDetailPanel,
-  TweetTreeItem,
 } from './twitter'
 import type { Tweet } from './twitter'
-import { XTimelineProvider } from './twitter/treeProvider'
+import { useTwitterTimelineView, useTwitterBookmarksView } from './twitter/useTimelineView'
 
-export = defineExtension((context: ExtensionContext) => {
+// Tweet tree item interface for command arguments
+interface TweetTreeItemArg {
+  tweet: Tweet
+}
+
+export = defineExtension(() => {
   logger.info('VS Code Feeds Extension Activated')
 
   // Initialize X Web API with cookies from settings
@@ -39,28 +43,15 @@ export = defineExtension((context: ExtensionContext) => {
     updateCredentials()
   })
 
-  // Create tree view providers
-  const timelineProvider = new XTimelineProvider('timeline')
-  const bookmarksProvider = new XTimelineProvider('bookmarks')
-
-  // Register tree views
-  const timelineView = window.createTreeView('twitter-timeline', {
-    treeDataProvider: timelineProvider,
-    showCollapseAll: false,
-  })
-
-  const bookmarksView = window.createTreeView('twitter-bookmarks', {
-    treeDataProvider: bookmarksProvider,
-    showCollapseAll: false,
-  })
-
-  context.subscriptions.push(timelineView, bookmarksView)
+  // Create reactive tree views using reactive-vscode's useTreeView
+  const timeline = useTwitterTimelineView()
+  const bookmarks = useTwitterBookmarksView()
 
   // Register commands
   useCommand('vscode-feeds.refreshTimeline', () => {
     logger.info('Refreshing timeline...')
-    timelineProvider.refresh()
-    bookmarksProvider.refresh()
+    timeline.refresh()
+    bookmarks.refresh()
     window.showInformationMessage('Timeline refreshed')
   })
 
@@ -70,16 +61,16 @@ export = defineExtension((context: ExtensionContext) => {
       return
     }
     logger.info(`Viewing tweet: ${tweet.id}`)
-    await TweetDetailPanel.show(context.extensionUri, tweet)
+    await TweetDetailPanel.show(tweet)
   })
 
-  useCommand('vscode-feeds.likeTweet', async (item: TweetTreeItem) => {
+  useCommand('vscode-feeds.likeTweet', async (item: TweetTreeItemArg) => {
     if (!item?.tweet) return
     try {
       await xWebApi.likeTweet(item.tweet.id)
       item.tweet.liked = true
-      timelineProvider.updateTweet(item.tweet)
-      bookmarksProvider.updateTweet(item.tweet)
+      timeline.updateTweet(item.tweet)
+      bookmarks.updateTweet(item.tweet)
       window.showInformationMessage('Tweet liked!')
     }
     catch (error) {
@@ -87,13 +78,13 @@ export = defineExtension((context: ExtensionContext) => {
     }
   })
 
-  useCommand('vscode-feeds.unlikeTweet', async (item: TweetTreeItem) => {
+  useCommand('vscode-feeds.unlikeTweet', async (item: TweetTreeItemArg) => {
     if (!item?.tweet) return
     try {
       await xWebApi.unlikeTweet(item.tweet.id)
       item.tweet.liked = false
-      timelineProvider.updateTweet(item.tweet)
-      bookmarksProvider.updateTweet(item.tweet)
+      timeline.updateTweet(item.tweet)
+      bookmarks.updateTweet(item.tweet)
       window.showInformationMessage('Tweet unliked')
     }
     catch (error) {
@@ -101,13 +92,13 @@ export = defineExtension((context: ExtensionContext) => {
     }
   })
 
-  useCommand('vscode-feeds.bookmarkTweet', async (item: TweetTreeItem) => {
+  useCommand('vscode-feeds.bookmarkTweet', async (item: TweetTreeItemArg) => {
     if (!item?.tweet) return
     try {
       await xWebApi.bookmarkTweet(item.tweet.id)
       item.tweet.bookmarked = true
-      timelineProvider.updateTweet(item.tweet)
-      bookmarksProvider.updateTweet(item.tweet)
+      timeline.updateTweet(item.tweet)
+      bookmarks.updateTweet(item.tweet)
       window.showInformationMessage('Tweet bookmarked!')
     }
     catch (error) {
@@ -115,13 +106,13 @@ export = defineExtension((context: ExtensionContext) => {
     }
   })
 
-  useCommand('vscode-feeds.removeBookmark', async (item: TweetTreeItem) => {
+  useCommand('vscode-feeds.removeBookmark', async (item: TweetTreeItemArg) => {
     if (!item?.tweet) return
     try {
       await xWebApi.removeBookmark(item.tweet.id)
       item.tweet.bookmarked = false
-      timelineProvider.updateTweet(item.tweet)
-      bookmarksProvider.updateTweet(item.tweet)
+      timeline.updateTweet(item.tweet)
+      bookmarks.updateTweet(item.tweet)
       window.showInformationMessage('Bookmark removed')
     }
     catch (error) {
@@ -129,24 +120,24 @@ export = defineExtension((context: ExtensionContext) => {
     }
   })
 
-  useCommand('vscode-feeds.openInBrowser', (item: TweetTreeItem) => {
+  useCommand('vscode-feeds.openInBrowser', (item: TweetTreeItemArg) => {
     if (!item?.tweet) return
     const url = `https://x.com/i/status/${item.tweet.id}`
     env.openExternal(Uri.parse(url))
   })
 
   useCommand('vscode-feeds.switchToForYou', () => {
-    timelineProvider.setTimelineType('forYou')
+    timeline.setTimelineType('forYou')
     window.showInformationMessage('Switched to For You timeline')
   })
 
   useCommand('vscode-feeds.switchToFollowing', () => {
-    timelineProvider.setTimelineType('following')
+    timeline.setTimelineType('following')
     window.showInformationMessage('Switched to Following timeline')
   })
 
   useCommand('vscode-feeds.toggleTimelineType', async () => {
-    const current = timelineProvider.getTimelineType()
+    const current = timeline.getTimelineType()
     const items = [
       { label: '$(star) For You', description: 'Recommended tweets', value: 'forYou' as const },
       { label: '$(people) Following', description: 'Tweets from people you follow', value: 'following' as const },
@@ -158,17 +149,17 @@ export = defineExtension((context: ExtensionContext) => {
     })
 
     if (selected) {
-      timelineProvider.setTimelineType(selected.value)
+      timeline.setTimelineType(selected.value)
     }
   })
 
   useCommand('vscode-feeds.loadMore', async (viewType: 'timeline' | 'bookmarks', _nextToken: string) => {
     try {
       if (viewType === 'timeline') {
-        await timelineProvider.loadMore()
+        await timeline.loadMore()
       }
       else {
-        await bookmarksProvider.loadMore()
+        await bookmarks.loadMore()
       }
     }
     catch (error) {
@@ -203,8 +194,8 @@ export = defineExtension((context: ExtensionContext) => {
 
     xWebApi.clearCredentials()
     commands.executeCommand('setContext', 'vscode-feeds.isAuthenticated', false)
-    timelineProvider.refresh()
-    bookmarksProvider.refresh()
+    timeline.refresh()
+    bookmarks.refresh()
     window.showInformationMessage('Logged out from X')
   })
 
