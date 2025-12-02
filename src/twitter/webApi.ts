@@ -516,6 +516,12 @@ export class XWebApiService {
           continue
         }
 
+        // 跳过广告条目（entryId 包含 promoted）
+        if (entry.entryId.includes('promoted') || entry.entryId.includes('Promoted')) {
+          logger.info('Skipping promoted entry:', entry.entryId)
+          continue
+        }
+
         // 解析推文
         if (entry.content.itemContent?.tweet_results?.result) {
           const tweet = this.parseTweet(entry.content.itemContent.tweet_results.result)
@@ -535,11 +541,23 @@ export class XWebApiService {
   /**
    * 解析单条推文
    */
-  private parseTweet(result: RawTweetResult): Tweet {
+  private parseTweet(result: RawTweetResult): Tweet | null {
     // 处理不同类型的推文结果
     let tweetData = result
     if (result.__typename === 'TweetWithVisibilityResults') {
       tweetData = result.tweet as RawTweetResult
+    }
+
+    // 跳过广告推文
+    if (this.isPromotedTweet(result)) {
+      logger.info('Skipping promoted tweet')
+      return null
+    }
+
+    // 检查是否有必要的数据
+    if (!tweetData || !tweetData.legacy) {
+      logger.warn('Tweet data or legacy is missing, skipping:', result.__typename)
+      return null
     }
 
     const legacy = tweetData.legacy
@@ -591,6 +609,37 @@ export class XWebApiService {
     }
 
     return tweet
+  }
+
+  /**
+   * 检测是否为广告推文
+   */
+  private isPromotedTweet(result: RawTweetResult): boolean {
+    // 检查 promotedMetadata 字段（广告推文通常有这个）
+    if ((result as any).promotedMetadata) {
+      return true
+    }
+
+    // 检查 card 类型是否为广告
+    if ((result as any).card?.legacy?.name?.includes('promo')) {
+      return true
+    }
+
+    // 检查是否有广告相关的 typename
+    if (result.__typename === 'TweetPromotedMetadata') {
+      return true
+    }
+
+    // 检查 legacy 中的广告标记
+    const legacy = result.legacy || (result.tweet as RawTweetResult)?.legacy
+    if (legacy) {
+      // 检查 scopes 中的广告标记
+      if ((legacy as any).scopes?.followers === false) {
+        return true
+      }
+    }
+
+    return false
   }
 }
 
