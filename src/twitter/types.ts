@@ -69,6 +69,8 @@ export interface TweetDetail extends Tweet {
   replies?: Tweet[]
   quoted_tweet?: Tweet
   reply_to_tweet?: Tweet
+  repliesCursor?: string  // 用于加载更多回复
+  hasMoreReplies?: boolean
 }
 
 export interface TimelineResponse {

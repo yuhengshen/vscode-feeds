@@ -316,6 +316,7 @@ export class XWebApiService {
                     }
                   }
                 }>
+                value?: string  // cursor value
               }
             }>
           }>
@@ -327,6 +328,7 @@ export class XWebApiService {
 
     let mainTweet: Tweet | null = null
     const replies: Tweet[] = []
+    let repliesCursor: string | undefined
 
     // 解析回复和主推文
     const instructions = data.data.threaded_conversation_with_injections_v2?.instructions || []
@@ -335,6 +337,20 @@ export class XWebApiService {
         continue
 
       for (const entry of instruction.entries) {
+        // 跳过"发现更多"推荐内容（不是真正的回复）
+        // 这些条目通常是 tweetdetailrelatedtweets-xxx、who-to-follow-xxx 等
+        if (entry.entryId.startsWith('tweetdetailrelatedtweets-')
+          || entry.entryId.startsWith('who-to-follow')) {
+          logger.info('Skipping non-reply entry:', entry.entryId)
+          continue
+        }
+
+        // 获取加载更多回复的游标（可能是 cursor-showmorethreads- 或 cursor-bottom-）
+        if (entry.entryId.startsWith('cursor-showmorethreads-') || entry.entryId.startsWith('cursor-bottom-')) {
+          repliesCursor = entry.content.value
+          continue
+        }
+
         // 查找焦点推文（主推文）
         if (entry.entryId.includes(tweetId) || entry.entryId.startsWith('tweet-')) {
           if (entry.content.itemContent?.tweet_results?.result) {
@@ -350,8 +366,8 @@ export class XWebApiService {
           }
         }
 
-        // 处理对话线程
-        if (entry.content.items) {
+        // 处理对话线程（真正的回复）
+        if (entry.entryId.startsWith('conversationthread-') && entry.content.items) {
           for (const item of entry.content.items) {
             if (item.item?.itemContent?.tweet_results?.result) {
               const tweet = this.parseTweet(item.item.itemContent.tweet_results.result)
@@ -381,7 +397,118 @@ export class XWebApiService {
     return {
       ...mainTweet,
       replies,
+      repliesCursor,
+      hasMoreReplies: !!repliesCursor,
     }
+  }
+
+  /**
+   * 加载更多回复
+   */
+  async getMoreReplies(tweetId: string, cursor: string): Promise<{ replies: Tweet[], cursor?: string }> {
+    const variables = {
+      focalTweetId: tweetId,
+      cursor,
+      referrer: 'tweet',
+      with_rux_injections: false,
+      rankingMode: 'Relevance',
+      includePromotedContent: false,
+      withCommunity: true,
+      withQuickPromoteEligibilityTweetFields: true,
+      withBirdwatchNotes: true,
+      withVoice: true,
+    }
+
+    const data = await this.graphqlRequest<{
+      data: {
+        threaded_conversation_with_injections_v2?: {
+          instructions: Array<{
+            type: string
+            entries?: Array<{
+              entryId: string
+              content: {
+                entryType?: string
+                itemContent?: {
+                  tweet_results?: {
+                    result: RawTweetResult
+                  }
+                  value?: string
+                }
+                items?: Array<{
+                  item: {
+                    itemContent: {
+                      tweet_results?: {
+                        result: RawTweetResult
+                      }
+                    }
+                  }
+                }>
+                value?: string
+              }
+            }>
+            moduleItems?: Array<{
+              item: {
+                itemContent: {
+                  tweet_results?: {
+                    result: RawTweetResult
+                  }
+                }
+              }
+            }>
+          }>
+        }
+      }
+    }>(QUERY_IDS.TweetDetail, 'TweetDetail', variables)
+
+    const replies: Tweet[] = []
+    let nextCursor: string | undefined
+
+    const instructions = data.data.threaded_conversation_with_injections_v2?.instructions || []
+    for (const instruction of instructions) {
+      // 处理 moduleItems（分页加载返回的格式）
+      if (instruction.type === 'TimelineAddToModule' && instruction.moduleItems) {
+        for (const item of instruction.moduleItems) {
+          if (item.item?.itemContent?.tweet_results?.result) {
+            const tweet = this.parseTweet(item.item.itemContent.tweet_results.result)
+            if (tweet && tweet.id !== tweetId) {
+              replies.push(tweet)
+            }
+          }
+        }
+      }
+
+      if (!instruction.entries)
+        continue
+
+      for (const entry of instruction.entries) {
+        // 跳过推荐内容
+        if (entry.entryId.startsWith('tweetdetailrelatedtweets-')
+          || entry.entryId.startsWith('who-to-follow')) {
+          continue
+        }
+
+        // 获取下一页游标
+        if (entry.entryId.startsWith('cursor-showmorethreads-') || entry.entryId.startsWith('cursor-bottom-')) {
+          nextCursor = entry.content.value
+          continue
+        }
+
+        // 解析回复
+        if (entry.entryId.startsWith('conversationthread-') && entry.content.items) {
+          for (const item of entry.content.items) {
+            if (item.item?.itemContent?.tweet_results?.result) {
+              const tweet = this.parseTweet(item.item.itemContent.tweet_results.result)
+              if (tweet && tweet.id !== tweetId) {
+                replies.push(tweet)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 如果没有加载到新回复，说明已经到底了，不返回 cursor
+    return { replies, cursor: replies.length > 0 ? nextCursor : undefined }
   }
 
   /**

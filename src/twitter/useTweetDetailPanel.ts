@@ -118,6 +118,31 @@ export function useTweetDetailPanel() {
         }
         break
 
+      case 'loadMoreReplies':
+        if (currentTweet.value?.repliesCursor) {
+          try {
+            postMessage({ type: 'loadingMore' })
+            const { replies: moreReplies, cursor } = await xWebApi.getMoreReplies(
+              currentTweet.value.id,
+              currentTweet.value.repliesCursor
+            )
+            // 合并回复并更新游标
+            currentTweet.value = {
+              ...currentTweet.value,
+              replies: [...(currentTweet.value.replies || []), ...moreReplies],
+              repliesCursor: cursor,
+              hasMoreReplies: !!cursor,
+            }
+            postMessage({ type: 'tweet', tweet: currentTweet.value })
+          }
+          catch (err) {
+            logger.error('Failed to load more replies:', err)
+            window.showErrorMessage(`Failed to load more replies: ${err}`)
+            postMessage({ type: 'loadMoreError' })
+          }
+        }
+        break
+
       case 'openExternal':
         if (message.tweetId) {
           const url = `https://twitter.com/i/status/${message.tweetId}`

@@ -9,6 +9,7 @@ export interface TweetActions {
   removeBookmark: (tweetId: string) => void
   viewReply: (tweetId: string) => void
   openExternal: (tweetId: string) => void
+  loadMoreReplies: () => void
 }
 
 // Global actions instance (set by main.ts)
@@ -168,7 +169,7 @@ function renderReplyCard(reply: Tweet) {
 }
 
 // Replies section rendering
-function renderReplies(replies: Tweet[]) {
+function renderReplies(replies: Tweet[], hasMoreReplies?: boolean, loadingMore?: boolean) {
   if (!replies || replies.length === 0) {
     return html`
       <div class="replies-section">
@@ -182,12 +183,21 @@ function renderReplies(replies: Tweet[]) {
     <div class="replies-section">
       <div class="replies-header">Replies (${replies.length})</div>
       ${replies.map(reply => renderReplyCard(reply))}
+      ${hasMoreReplies ? html`
+        <button 
+          class="load-more-btn" 
+          @click=${() => actions.loadMoreReplies()}
+          ?disabled=${loadingMore}
+        >
+          ${loadingMore ? 'Loading...' : 'Load More Replies'}
+        </button>
+      ` : nothing}
     </div>
   `
 }
 
 // Main tweet template
-export function renderTweet(tweet: TweetDetail) {
+export function renderTweet(tweet: TweetDetail, loadingMore?: boolean) {
   const author = tweet.author
   const metrics = tweet.public_metrics
   const date = new Date(tweet.created_at).toLocaleString()
@@ -256,7 +266,7 @@ export function renderTweet(tweet: TweetDetail) {
         </div>
       </div>
       
-      ${renderReplies(tweet.replies || [])}
+      ${renderReplies(tweet.replies || [], tweet.hasMoreReplies, loadingMore)}
     </div>
   `
 }

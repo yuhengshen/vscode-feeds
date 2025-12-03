@@ -14,12 +14,14 @@ setActions({
   removeBookmark: (tweetId) => vscode.postMessage({ type: "removeBookmark", tweetId }),
   viewReply: (tweetId) => vscode.postMessage({ type: "viewReply", tweetId }),
   openExternal: (tweetId) => vscode.postMessage({ type: "openExternal", tweetId }),
+  loadMoreReplies: () => vscode.postMessage({ type: "loadMoreReplies" }),
 });
 
 // State
 let currentTweet: TweetDetail | null = null;
 let loading = true;
 let error: string | null = null;
+let loadingMore = false;
 
 // Render function
 function renderApp() {
@@ -30,7 +32,7 @@ function renderApp() {
   } else if (error) {
     render(renderError(error), container);
   } else if (currentTweet) {
-    render(renderTweet(currentTweet), container);
+    render(renderTweet(currentTweet, loadingMore), container);
   } else {
     render(renderLoading(), container);
   }
@@ -50,6 +52,7 @@ window.addEventListener("message", (event) => {
     case "tweet":
       currentTweet = message.tweet;
       loading = false;
+      loadingMore = false;
       error = null;
       renderApp();
       break;
@@ -57,6 +60,16 @@ window.addEventListener("message", (event) => {
     case "error":
       error = message.error;
       loading = false;
+      renderApp();
+      break;
+
+    case "loadingMore":
+      loadingMore = true;
+      renderApp();
+      break;
+
+    case "loadMoreError":
+      loadingMore = false;
       renderApp();
       break;
   }

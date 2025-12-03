@@ -241,6 +241,28 @@ export const styles = `
     padding: 24px;
   }
   
+  /* Load more button */
+  .load-more-btn {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    margin-top: 12px;
+    background: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .load-more-btn:hover:not(:disabled) {
+    background: var(--vscode-button-secondaryHoverBackground);
+  }
+  .load-more-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
   .loader {
     border: 4px solid var(--vscode-widget-border);
     border-top: 4px solid var(--vscode-button-background);
