@@ -225,18 +225,19 @@ export function useTweetDetailPanel() {
             tweetDetail.id,
             tweetDetail.repliesCursor
           )
+          // 合并回复
           if (moreReplies.length > 0) {
             tweetDetail.replies = [...(tweetDetail.replies || []), ...moreReplies]
-            tweetDetail.repliesCursor = nextCursor
-            tweetDetail.hasMoreReplies = !!nextCursor
           }
-          else {
-            tweetDetail.repliesCursor = undefined
-            tweetDetail.hasMoreReplies = false
-          }
+          // 根据是否有下一页 cursor 决定是否显示加载更多按钮
+          tweetDetail.repliesCursor = nextCursor
+          tweetDetail.hasMoreReplies = !!nextCursor
         }
         catch (err) {
+          // 预加载失败时，保守地隐藏加载更多按钮
           logger.warn('Failed to preload more replies:', err)
+          tweetDetail.repliesCursor = undefined
+          tweetDetail.hasMoreReplies = false
         }
       }
 
