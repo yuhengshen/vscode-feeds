@@ -117,7 +117,7 @@ function renderMedia(media: MediaItem[]) {
 function renderQuotedTweet(tweet: Tweet) {
   const author = tweet.author
   return html`
-    <div class="quoted-tweet">
+    <div class="quoted-tweet" @click=${() => actions.viewReply(tweet.id)}>
       <div class="tweet-header">
         ${author?.profile_image_url
           ? html`<img class="avatar" src="${author.profile_image_url}" alt="${author.name}">`
@@ -136,11 +136,28 @@ function renderQuotedTweet(tweet: Tweet) {
   `
 }
 
-// Reply to rendering
+// Reply to rendering (shows the tweet being replied to)
 function renderReplyTo(tweet: Tweet) {
+  const author = tweet.author
   return html`
-    <div class="reply-to">
-      Replying to <a href="javascript:void(0)" @click=${() => actions.viewReply(tweet.id)}>@${tweet.author?.username || 'unknown'}</a>
+    <div class="reply-to-section">
+      <div class="reply-to-label">Replying to</div>
+      <div class="reply-to-card" @click=${() => actions.viewReply(tweet.id)}>
+        <div class="tweet-header">
+          ${author?.profile_image_url
+            ? html`<img class="avatar" src="${author.profile_image_url}" alt="${author.name}">`
+            : html`<div class="avatar"></div>`
+          }
+          <div class="author-info">
+            <div class="author-name">
+              ${author?.name || 'Unknown'}
+              ${author?.verified ? html`<span class="verified-badge">✓</span>` : nothing}
+            </div>
+            <div class="author-username">@${author?.username || 'unknown'}</div>
+          </div>
+        </div>
+        <div class="reply-to-text">${formatTweetText(tweet.text)}</div>
+      </div>
     </div>
   `
 }

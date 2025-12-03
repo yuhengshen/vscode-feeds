@@ -163,6 +163,11 @@ export const styles = `
     border-radius: 12px;
     padding: 12px;
     margin: 12px 0;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .quoted-tweet:hover {
+    background: var(--vscode-list-hoverBackground);
   }
   .quoted-tweet .tweet-header {
     margin-bottom: 8px;
@@ -171,15 +176,49 @@ export const styles = `
     width: 24px;
     height: 24px;
   }
+  .quoted-tweet .tweet-text {
+    font-size: 0.95em;
+  }
   
   /* Reply to */
-  .reply-to {
+  .reply-to-section {
+    margin-bottom: 16px;
+  }
+  .reply-to-label {
     color: var(--vscode-descriptionForeground);
-    font-size: 0.9em;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+    padding-left: 4px;
+  }
+  .reply-to-card {
+    background: var(--vscode-editor-inactiveSelectionBackground);
+    border-radius: 12px;
+    padding: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-left: 3px solid var(--vscode-textLink-foreground);
+  }
+  .reply-to-card:hover {
+    background: var(--vscode-list-hoverBackground);
+  }
+  .reply-to-card .tweet-header {
     margin-bottom: 8px;
   }
-  .reply-to a {
+  .reply-to-card .avatar {
+    width: 32px;
+    height: 32px;
+  }
+  .reply-to-text {
+    font-size: 0.95em;
+    color: var(--vscode-foreground);
+    opacity: 0.9;
+  }
+  .reply-to-text a {
     color: var(--vscode-textLink-foreground);
+    text-decoration: none;
+  }
+  .reply-to-text a:hover {
+    text-decoration: underline;
   }
   
   /* Replies section */

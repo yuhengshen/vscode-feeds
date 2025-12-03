@@ -327,6 +327,7 @@ export class XWebApiService {
     logger.info('TweetDetail response keys:', Object.keys(data.data || {}))
 
     let mainTweet: Tweet | null = null
+    let replyToTweet: Tweet | null = null
     const replies: Tweet[] = []
     let repliesCursor: string | undefined
 
@@ -366,20 +367,36 @@ export class XWebApiService {
           }
         }
 
-        // 处理对话线程（真正的回复）
+        // 处理对话线程
         if (entry.entryId.startsWith('conversationthread-') && entry.content.items) {
+          // 收集线程中的所有推文
+          const threadTweets: Tweet[] = []
           for (const item of entry.content.items) {
             if (item.item?.itemContent?.tweet_results?.result) {
               const tweet = this.parseTweet(item.item.itemContent.tweet_results.result)
               if (tweet) {
-                if (tweet.id === tweetId) {
-                  mainTweet = tweet
-                }
-                else {
-                  replies.push(tweet)
-                }
+                threadTweets.push(tweet)
               }
             }
+          }
+
+          // 在线程中查找主推文及其位置
+          const mainTweetIndex = threadTweets.findIndex(t => t.id === tweetId)
+          if (mainTweetIndex !== -1) {
+            mainTweet = threadTweets[mainTweetIndex]
+            // 主推文之前的是被回复的推文链
+            if (mainTweetIndex > 0) {
+              // 取最后一条作为直接回复的推文
+              replyToTweet = threadTweets[mainTweetIndex - 1]
+            }
+            // 主推文之后的是回复
+            for (let i = mainTweetIndex + 1; i < threadTweets.length; i++) {
+              replies.push(threadTweets[i])
+            }
+          }
+          else {
+            // 如果线程中没有主推文，则全部视为回复
+            replies.push(...threadTweets)
           }
         }
       }
@@ -397,6 +414,7 @@ export class XWebApiService {
     return {
       ...mainTweet,
       replies,
+      reply_to_tweet: replyToTweet || undefined,
       repliesCursor,
       hasMoreReplies: !!repliesCursor,
     }
@@ -763,6 +781,19 @@ export class XWebApiService {
       }))
     }
 
+    // 解析引用的推文
+    if (tweetData.quoted_status_result?.result) {
+      const quotedTweet = this.parseTweet(tweetData.quoted_status_result.result)
+      if (quotedTweet) {
+        tweet.quoted_tweet = quotedTweet
+      }
+    }
+
+    // 记录回复的推文 ID
+    if (legacy.in_reply_to_status_id_str) {
+      tweet.in_reply_to_status_id = legacy.in_reply_to_status_id_str
+    }
+
     return tweet
   }
 
@@ -824,6 +855,9 @@ interface RawTweetResult {
       }
     }
   }
+  quoted_status_result?: {
+    result?: RawTweetResult
+  }
   legacy: {
     id_str: string
     user_id_str: string
@@ -836,6 +870,7 @@ interface RawTweetResult {
     quote_count: number
     favorited?: boolean
     bookmarked?: boolean
+    in_reply_to_status_id_str?: string
     extended_entities?: {
       media: RawMedia[]
     }

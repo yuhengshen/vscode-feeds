@@ -107,9 +107,18 @@ export function useTweetDetailPanel() {
       case 'viewReply':
         if (message.tweetId) {
           try {
-            const reply = currentTweet.value?.replies?.find(r => r.id === message.tweetId)
-            if (reply) {
-              await show(reply)
+            // 在 replies 中查找
+            let targetTweet = currentTweet.value?.replies?.find(r => r.id === message.tweetId)
+            // 也检查 reply_to_tweet（被回复的推文）
+            if (!targetTweet && currentTweet.value?.reply_to_tweet?.id === message.tweetId) {
+              targetTweet = currentTweet.value.reply_to_tweet
+            }
+            // 也检查 quoted_tweet（引用的推文）
+            if (!targetTweet && currentTweet.value?.quoted_tweet?.id === message.tweetId) {
+              targetTweet = currentTweet.value.quoted_tweet
+            }
+            if (targetTweet) {
+              await show(targetTweet)
             }
           }
           catch (err) {

@@ -59,6 +59,8 @@ export interface Tweet {
   }[]
   conversation_id?: string
   in_reply_to_user_id?: string
+  in_reply_to_status_id?: string  // 回复的推文 ID
+  quoted_tweet?: Tweet  // 引用的推文
   
   // Local state
   liked?: boolean
