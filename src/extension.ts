@@ -22,7 +22,6 @@ export = defineExtension(() => {
 
   // Initialize X Web API with cookies from settings
   const updateCredentials = () => {
-    // 优先使用 Web Cookie 认证
     if (ct0.value && authToken.value) {
       xWebApi.setCredentials({
         ct0: ct0.value,
@@ -32,8 +31,6 @@ export = defineExtension(() => {
       logger.info('Using X Web Cookie credentials')
       return
     }
-
-    // 清除认证
     xWebApi.clearCredentials()
     commands.executeCommand('setContext', 'vscode-feeds.isAuthenticated', false)
   }
@@ -43,9 +40,35 @@ export = defineExtension(() => {
     updateCredentials()
   })
 
-  // Create reactive tree views using reactive-vscode's useTreeView
+  // Create reactive tree views
   const timeline = useTwitterTimelineView()
   const bookmarks = useTwitterBookmarksView()
+
+  // Helper to update tweet in both views
+  const updateTweetInViews = (tweet: Tweet) => {
+    timeline.updateTweet(tweet)
+    bookmarks.updateTweet(tweet)
+  }
+
+  // Generic tweet action handler
+  const handleTweetAction = async (
+    item: TweetTreeItemArg | undefined,
+    action: (tweetId: string) => Promise<unknown>,
+    update: (tweet: Tweet) => void,
+    successMsg: string,
+    errorMsg: string
+  ) => {
+    if (!item?.tweet) return
+    try {
+      await action(item.tweet.id)
+      update(item.tweet)
+      updateTweetInViews(item.tweet)
+      window.showInformationMessage(successMsg)
+    }
+    catch (error) {
+      window.showErrorMessage(`${errorMsg}: ${error}`)
+    }
+  }
 
   // Register commands
   useCommand('vscode-feeds.refreshTimeline', () => {
@@ -64,66 +87,25 @@ export = defineExtension(() => {
     await getTweetDetailPanel().show(tweet)
   })
 
-  useCommand('vscode-feeds.likeTweet', async (item: TweetTreeItemArg) => {
-    if (!item?.tweet) return
-    try {
-      await xWebApi.likeTweet(item.tweet.id)
-      item.tweet.liked = true
-      timeline.updateTweet(item.tweet)
-      bookmarks.updateTweet(item.tweet)
-      window.showInformationMessage('Tweet liked!')
-    }
-    catch (error) {
-      window.showErrorMessage(`Failed to like tweet: ${error}`)
-    }
-  })
+  useCommand('vscode-feeds.likeTweet', (item: TweetTreeItemArg) =>
+    handleTweetAction(item, xWebApi.likeTweet.bind(xWebApi), t => t.liked = true, 'Tweet liked!', 'Failed to like tweet')
+  )
 
-  useCommand('vscode-feeds.unlikeTweet', async (item: TweetTreeItemArg) => {
-    if (!item?.tweet) return
-    try {
-      await xWebApi.unlikeTweet(item.tweet.id)
-      item.tweet.liked = false
-      timeline.updateTweet(item.tweet)
-      bookmarks.updateTweet(item.tweet)
-      window.showInformationMessage('Tweet unliked')
-    }
-    catch (error) {
-      window.showErrorMessage(`Failed to unlike tweet: ${error}`)
-    }
-  })
+  useCommand('vscode-feeds.unlikeTweet', (item: TweetTreeItemArg) =>
+    handleTweetAction(item, xWebApi.unlikeTweet.bind(xWebApi), t => t.liked = false, 'Tweet unliked', 'Failed to unlike tweet')
+  )
 
-  useCommand('vscode-feeds.bookmarkTweet', async (item: TweetTreeItemArg) => {
-    if (!item?.tweet) return
-    try {
-      await xWebApi.bookmarkTweet(item.tweet.id)
-      item.tweet.bookmarked = true
-      timeline.updateTweet(item.tweet)
-      bookmarks.updateTweet(item.tweet)
-      window.showInformationMessage('Tweet bookmarked!')
-    }
-    catch (error) {
-      window.showErrorMessage(`Failed to bookmark tweet: ${error}`)
-    }
-  })
+  useCommand('vscode-feeds.bookmarkTweet', (item: TweetTreeItemArg) =>
+    handleTweetAction(item, xWebApi.bookmarkTweet.bind(xWebApi), t => t.bookmarked = true, 'Tweet bookmarked!', 'Failed to bookmark tweet')
+  )
 
-  useCommand('vscode-feeds.removeBookmark', async (item: TweetTreeItemArg) => {
-    if (!item?.tweet) return
-    try {
-      await xWebApi.removeBookmark(item.tweet.id)
-      item.tweet.bookmarked = false
-      timeline.updateTweet(item.tweet)
-      bookmarks.updateTweet(item.tweet)
-      window.showInformationMessage('Bookmark removed')
-    }
-    catch (error) {
-      window.showErrorMessage(`Failed to remove bookmark: ${error}`)
-    }
-  })
+  useCommand('vscode-feeds.removeBookmark', (item: TweetTreeItemArg) =>
+    handleTweetAction(item, xWebApi.removeBookmark.bind(xWebApi), t => t.bookmarked = false, 'Bookmark removed', 'Failed to remove bookmark')
+  )
 
   useCommand('vscode-feeds.openInBrowser', (item: TweetTreeItemArg) => {
     if (!item?.tweet) return
-    const url = `https://x.com/i/status/${item.tweet.id}`
-    env.openExternal(Uri.parse(url))
+    env.openExternal(Uri.parse(`https://x.com/i/status/${item.tweet.id}`))
   })
 
   useCommand('vscode-feeds.switchToForYou', () => {

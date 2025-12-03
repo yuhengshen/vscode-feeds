@@ -46,6 +46,8 @@ window.addEventListener("message", (event) => {
     case "loading":
       loading = true;
       error = null;
+      // 滚动到顶部，确保新推文从顶部开始显示
+      window.scrollTo(0, 0);
       renderApp();
       break;
 

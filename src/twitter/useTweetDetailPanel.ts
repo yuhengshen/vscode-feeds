@@ -38,91 +38,97 @@ export function useTweetDetailPanel() {
   const error = ref<string | null>(null)
   const disposables: Disposable[] = []
 
-  function postMessage(message: any) {
+  function postMessage(message: unknown) {
     panel.value?.webview.postMessage(message)
   }
 
+  // 更新当前推文状态并同步到 webview
+  function updateTweet(updates: Partial<TweetDetail>) {
+    if (!currentTweet.value) return
+    currentTweet.value = { ...currentTweet.value, ...updates }
+    postMessage({ type: 'tweet', tweet: currentTweet.value })
+  }
+
+  // 通用的推文操作处理器
+  async function handleTweetAction<T>(
+    action: () => Promise<T>,
+    onSuccess: (result: T) => void,
+    errorMsg: string
+  ) {
+    try {
+      const result = await action()
+      onSuccess(result)
+    }
+    catch (err) {
+      window.showErrorMessage(`${errorMsg}: ${err}`)
+    }
+  }
+
+  // 加载更多回复
+  async function fetchMoreReplies(tweetId: string, cursor: string) {
+    const { replies: moreReplies, cursor: nextCursor } = await xWebApi.getMoreReplies(tweetId, cursor)
+    return { moreReplies, nextCursor }
+  }
+
+  // 在当前推文中查找目标推文
+  function findTweetById(tweetId: string): Tweet | undefined {
+    const tweet = currentTweet.value
+    if (!tweet) return undefined
+
+    return tweet.replies?.find(r => r.id === tweetId)
+      || (tweet.reply_to_tweet?.id === tweetId ? tweet.reply_to_tweet : undefined)
+      || (tweet.quoted_tweet?.id === tweetId ? tweet.quoted_tweet : undefined)
+  }
+
   async function handleMessage(message: { type: string, tweetId?: string }): Promise<void> {
-    switch (message.type) {
+    const { type, tweetId } = message
+
+    switch (type) {
       case 'like':
-        if (message.tweetId) {
-          try {
-            await xWebApi.likeTweet(message.tweetId)
-            if (currentTweet.value) {
-              currentTweet.value = { ...currentTweet.value, liked: true }
-              postMessage({ type: 'tweet', tweet: currentTweet.value })
-            }
-          }
-          catch (err) {
-            window.showErrorMessage(`Failed to like tweet: ${err}`)
-          }
+        if (tweetId) {
+          await handleTweetAction(
+            () => xWebApi.likeTweet(tweetId),
+            () => updateTweet({ liked: true }),
+            'Failed to like tweet'
+          )
         }
         break
 
       case 'unlike':
-        if (message.tweetId) {
-          try {
-            await xWebApi.unlikeTweet(message.tweetId)
-            if (currentTweet.value) {
-              currentTweet.value = { ...currentTweet.value, liked: false }
-              postMessage({ type: 'tweet', tweet: currentTweet.value })
-            }
-          }
-          catch (err) {
-            window.showErrorMessage(`Failed to unlike tweet: ${err}`)
-          }
+        if (tweetId) {
+          await handleTweetAction(
+            () => xWebApi.unlikeTweet(tweetId),
+            () => updateTweet({ liked: false }),
+            'Failed to unlike tweet'
+          )
         }
         break
 
       case 'bookmark':
-        if (message.tweetId) {
-          try {
-            await xWebApi.bookmarkTweet(message.tweetId)
-            if (currentTweet.value) {
-              currentTweet.value = { ...currentTweet.value, bookmarked: true }
-              postMessage({ type: 'tweet', tweet: currentTweet.value })
-            }
-          }
-          catch (err) {
-            window.showErrorMessage(`Failed to bookmark tweet: ${err}`)
-          }
+        if (tweetId) {
+          await handleTweetAction(
+            () => xWebApi.bookmarkTweet(tweetId),
+            () => updateTweet({ bookmarked: true }),
+            'Failed to bookmark tweet'
+          )
         }
         break
 
       case 'removeBookmark':
-        if (message.tweetId) {
-          try {
-            await xWebApi.removeBookmark(message.tweetId)
-            if (currentTweet.value) {
-              currentTweet.value = { ...currentTweet.value, bookmarked: false }
-              postMessage({ type: 'tweet', tweet: currentTweet.value })
-            }
-          }
-          catch (err) {
-            window.showErrorMessage(`Failed to remove bookmark: ${err}`)
-          }
+        if (tweetId) {
+          await handleTweetAction(
+            () => xWebApi.removeBookmark(tweetId),
+            () => updateTweet({ bookmarked: false }),
+            'Failed to remove bookmark'
+          )
         }
         break
 
       case 'viewReply':
-        if (message.tweetId) {
-          try {
-            // 在 replies 中查找
-            let targetTweet = currentTweet.value?.replies?.find(r => r.id === message.tweetId)
-            // 也检查 reply_to_tweet（被回复的推文）
-            if (!targetTweet && currentTweet.value?.reply_to_tweet?.id === message.tweetId) {
-              targetTweet = currentTweet.value.reply_to_tweet
-            }
-            // 也检查 quoted_tweet（引用的推文）
-            if (!targetTweet && currentTweet.value?.quoted_tweet?.id === message.tweetId) {
-              targetTweet = currentTweet.value.quoted_tweet
-            }
-            if (targetTweet) {
-              await show(targetTweet)
-            }
-          }
-          catch (err) {
-            window.showErrorMessage(`Failed to view reply: ${err}`)
+        if (tweetId) {
+          const targetTweet = findTweetById(tweetId)
+          if (targetTweet) {
+            await show(targetTweet)
           }
         }
         break
@@ -131,18 +137,15 @@ export function useTweetDetailPanel() {
         if (currentTweet.value?.repliesCursor) {
           try {
             postMessage({ type: 'loadingMore' })
-            const { replies: moreReplies, cursor } = await xWebApi.getMoreReplies(
+            const { moreReplies, nextCursor } = await fetchMoreReplies(
               currentTweet.value.id,
               currentTweet.value.repliesCursor
             )
-            // 合并回复并更新游标
-            currentTweet.value = {
-              ...currentTweet.value,
+            updateTweet({
               replies: [...(currentTweet.value.replies || []), ...moreReplies],
-              repliesCursor: cursor,
-              hasMoreReplies: !!cursor,
-            }
-            postMessage({ type: 'tweet', tweet: currentTweet.value })
+              repliesCursor: nextCursor,
+              hasMoreReplies: !!nextCursor,
+            })
           }
           catch (err) {
             logger.error('Failed to load more replies:', err)
@@ -153,9 +156,8 @@ export function useTweetDetailPanel() {
         break
 
       case 'openExternal':
-        if (message.tweetId) {
-          const url = `https://twitter.com/i/status/${message.tweetId}`
-          env.openExternal(Uri.parse(url))
+        if (tweetId) {
+          env.openExternal(Uri.parse(`https://twitter.com/i/status/${tweetId}`))
         }
         break
     }
@@ -215,6 +217,29 @@ export function useTweetDetailPanel() {
 
       // Fetch full tweet details with replies
       const tweetDetail = await xWebApi.getTweetDetail(tweet.id)
+
+      // 预加载下一轮回复来确认是否真的有更多内容
+      if (tweetDetail.repliesCursor) {
+        try {
+          const { moreReplies, nextCursor } = await fetchMoreReplies(
+            tweetDetail.id,
+            tweetDetail.repliesCursor
+          )
+          if (moreReplies.length > 0) {
+            tweetDetail.replies = [...(tweetDetail.replies || []), ...moreReplies]
+            tweetDetail.repliesCursor = nextCursor
+            tweetDetail.hasMoreReplies = !!nextCursor
+          }
+          else {
+            tweetDetail.repliesCursor = undefined
+            tweetDetail.hasMoreReplies = false
+          }
+        }
+        catch (err) {
+          logger.warn('Failed to preload more replies:', err)
+        }
+      }
+
       currentTweet.value = tweetDetail
       loading.value = false
       postMessage({ type: 'tweet', tweet: tweetDetail })

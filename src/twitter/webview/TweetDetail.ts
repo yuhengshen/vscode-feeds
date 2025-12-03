@@ -1,5 +1,5 @@
 import { html, nothing } from 'lit-html'
-import type { Tweet, TweetDetail, MediaItem } from '../types'
+import type { Tweet, TweetDetail, MediaItem, TwitterUser } from '../types'
 
 // Action handlers interface
 export interface TweetActions {
@@ -31,20 +31,15 @@ function formatNumber(num: number): string {
 }
 
 function formatTweetText(text: string) {
-  // Split text into parts, keeping URLs, mentions, and hashtags separate
   const parts: Array<{ type: 'text' | 'url' | 'mention' | 'hashtag', value: string }> = []
-  
   const regex = /(https?:\/\/[^\s]+)|(@\w+)|(#\w+)/g
   let lastIndex = 0
   let match: RegExpExecArray | null
 
   while ((match = regex.exec(text)) !== null) {
-    // Add text before match
     if (match.index > lastIndex) {
       parts.push({ type: 'text', value: text.slice(lastIndex, match.index) })
     }
-    
-    // Add the match
     if (match[1]) {
       parts.push({ type: 'url', value: match[1] })
     } else if (match[2]) {
@@ -52,11 +47,9 @@ function formatTweetText(text: string) {
     } else if (match[3]) {
       parts.push({ type: 'hashtag', value: match[3] })
     }
-    
     lastIndex = regex.lastIndex
   }
   
-  // Add remaining text
   if (lastIndex < text.length) {
     parts.push({ type: 'text', value: text.slice(lastIndex) })
   }
@@ -73,6 +66,25 @@ function formatTweetText(text: string) {
         return part.value
     }
   })
+}
+
+// 通用的作者头部渲染
+function renderAuthorHeader(author?: TwitterUser) {
+  return html`
+    <div class="tweet-header">
+      ${author?.profile_image_url
+        ? html`<img class="avatar" src="${author.profile_image_url}" alt="${author.name}">`
+        : html`<div class="avatar"></div>`
+      }
+      <div class="author-info">
+        <div class="author-name">
+          ${author?.name || 'Unknown'}
+          ${author?.verified ? html`<span class="verified-badge">✓</span>` : nothing}
+        </div>
+        <div class="author-username">@${author?.username || 'unknown'}</div>
+      </div>
+    </div>
+  `
 }
 
 // Media rendering
@@ -115,22 +127,9 @@ function renderMedia(media: MediaItem[]) {
 
 // Quoted tweet rendering
 function renderQuotedTweet(tweet: Tweet) {
-  const author = tweet.author
   return html`
     <div class="quoted-tweet" @click=${() => actions.viewReply(tweet.id)}>
-      <div class="tweet-header">
-        ${author?.profile_image_url
-          ? html`<img class="avatar" src="${author.profile_image_url}" alt="${author.name}">`
-          : html`<div class="avatar"></div>`
-        }
-        <div class="author-info">
-          <div class="author-name">
-            ${author?.name || 'Unknown'}
-            ${author?.verified ? html`<span class="verified-badge">✓</span>` : nothing}
-          </div>
-          <div class="author-username">@${author?.username || 'unknown'}</div>
-        </div>
-      </div>
+      ${renderAuthorHeader(tweet.author)}
       <div class="tweet-text">${formatTweetText(tweet.text)}</div>
     </div>
   `
@@ -138,24 +137,11 @@ function renderQuotedTweet(tweet: Tweet) {
 
 // Reply to rendering (shows the tweet being replied to)
 function renderReplyTo(tweet: Tweet) {
-  const author = tweet.author
   return html`
     <div class="reply-to-section">
       <div class="reply-to-label">Replying to</div>
       <div class="reply-to-card" @click=${() => actions.viewReply(tweet.id)}>
-        <div class="tweet-header">
-          ${author?.profile_image_url
-            ? html`<img class="avatar" src="${author.profile_image_url}" alt="${author.name}">`
-            : html`<div class="avatar"></div>`
-          }
-          <div class="author-info">
-            <div class="author-name">
-              ${author?.name || 'Unknown'}
-              ${author?.verified ? html`<span class="verified-badge">✓</span>` : nothing}
-            </div>
-            <div class="author-username">@${author?.username || 'unknown'}</div>
-          </div>
-        </div>
+        ${renderAuthorHeader(tweet.author)}
         <div class="reply-to-text">${formatTweetText(tweet.text)}</div>
       </div>
     </div>
@@ -164,22 +150,9 @@ function renderReplyTo(tweet: Tweet) {
 
 // Reply card rendering
 function renderReplyCard(reply: Tweet) {
-  const author = reply.author
   return html`
     <div class="reply-card" @click=${() => actions.viewReply(reply.id)}>
-      <div class="tweet-header">
-        ${author?.profile_image_url
-          ? html`<img class="avatar" src="${author.profile_image_url}" alt="${author.name}">`
-          : html`<div class="avatar"></div>`
-        }
-        <div class="author-info">
-          <div class="author-name">
-            ${author?.name || 'Unknown'}
-            ${author?.verified ? html`<span class="verified-badge">✓</span>` : nothing}
-          </div>
-          <div class="author-username">@${author?.username || 'unknown'}</div>
-        </div>
-      </div>
+      ${renderAuthorHeader(reply.author)}
       <div class="reply-text">${formatTweetText(reply.text)}</div>
     </div>
   `
@@ -215,7 +188,6 @@ function renderReplies(replies: Tweet[], hasMoreReplies?: boolean, loadingMore?:
 
 // Main tweet template
 export function renderTweet(tweet: TweetDetail, loadingMore?: boolean) {
-  const author = tweet.author
   const metrics = tweet.public_metrics
   const date = new Date(tweet.created_at).toLocaleString()
 
@@ -228,19 +200,7 @@ export function renderTweet(tweet: TweetDetail, loadingMore?: boolean) {
           ↗
         </button>
         
-        <div class="tweet-header">
-          ${author?.profile_image_url
-            ? html`<img class="avatar" src="${author.profile_image_url}" alt="${author.name}">`
-            : html`<div class="avatar"></div>`
-          }
-          <div class="author-info">
-            <div class="author-name">
-              ${author?.name || 'Unknown'}
-              ${author?.verified ? html`<span class="verified-badge">✓</span>` : nothing}
-            </div>
-            <div class="author-username">@${author?.username || 'unknown'}</div>
-          </div>
-        </div>
+        ${renderAuthorHeader(tweet.author)}
         
         <div class="tweet-text">${formatTweetText(tweet.text)}</div>
         
