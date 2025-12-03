@@ -7,7 +7,7 @@ import {
 import { logger } from './utils'
 import {
   xWebApi,
-  TweetDetailPanel,
+  getTweetDetailPanel,
 } from './twitter'
 import type { Tweet } from './twitter'
 import { useTwitterTimelineView, useTwitterBookmarksView } from './twitter/useTimelineView'
@@ -61,7 +61,7 @@ export = defineExtension(() => {
       return
     }
     logger.info(`Viewing tweet: ${tweet.id}`)
-    await TweetDetailPanel.show(tweet)
+    await getTweetDetailPanel().show(tweet)
   })
 
   useCommand('vscode-feeds.likeTweet', async (item: TweetTreeItemArg) => {

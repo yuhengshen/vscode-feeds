@@ -214,8 +214,12 @@
   "devDependencies": {
     "@types/node": "22.x",
     "@types/vscode": "^1.99.0",
+    "@types/vscode-webview": "^1.57.5",
     "reactive-vscode": "^0.4.1",
     "tsdown": "^0.16.8",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "lit-html": "^3.3.1"
   }
 }

@@ -542,6 +542,34 @@ export class XWebApiService {
    * 解析单条推文
    */
   private parseTweet(result: RawTweetResult): Tweet | null {
+    // 处理 TweetTombstone 类型（已删除/不可访问的推文）
+    if (result.__typename === 'TweetTombstone') {
+      const tombstone = result.tombstone
+      const richText = tombstone?.text?.text || 'This tweet is unavailable'
+      // 尝试从 tombstone 中提取推文 ID（如果有的话）
+      const tweetId = result.rest_id || `tombstone_${Date.now()}`
+      
+      return {
+        id: tweetId,
+        text: `⚠️ ${richText}`,
+        author_id: 'unknown',
+        created_at: new Date().toISOString(),
+        author: {
+          id: 'unknown',
+          name: 'Unavailable',
+          username: 'unavailable',
+          profile_image_url: undefined,
+          verified: false,
+        },
+        public_metrics: {
+          retweet_count: 0,
+          reply_count: 0,
+          like_count: 0,
+          quote_count: 0,
+        },
+      }
+    }
+
     // 处理不同类型的推文结果
     let tweetData = result
     if (result.__typename === 'TweetWithVisibilityResults') {
@@ -648,6 +676,11 @@ interface RawTweetResult {
   __typename?: string
   rest_id?: string
   tweet?: RawTweetResult
+  tombstone?: {
+    text?: {
+      text?: string
+    }
+  }
   core?: {
     user_results?: {
       result?: {
