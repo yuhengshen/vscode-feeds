@@ -7,7 +7,12 @@ import { logger } from '../utils'
 
 export type TimelineType = 'forYou' | 'following'
 
-function createTweetTreeItem(tweet: Tweet, viewType: ViewType): TreeViewNode {
+// Extended TreeViewNode with tweet data for context menu commands
+export interface TweetTreeViewNode extends TreeViewNode {
+  tweet: Tweet
+}
+
+function createTweetTreeItem(tweet: Tweet, viewType: ViewType): TweetTreeViewNode {
   const hasMedia = tweet.media && tweet.media.length > 0
   const hasVideo = tweet.media?.some((m: MediaItem) => m.type === 'video' || m.type === 'animated_gif')
 
@@ -26,6 +31,7 @@ function createTweetTreeItem(tweet: Tweet, viewType: ViewType): TreeViewNode {
   const bookmarked = tweet.bookmarked ? 'bookmarked' : 'unbookmarked'
 
   return {
+    tweet, // Expose tweet for context menu commands
     treeItem: {
       id: `${viewType}-${tweet.id}`,
       label,
@@ -47,7 +53,7 @@ function createTweetTreeItem(tweet: Tweet, viewType: ViewType): TreeViewNode {
   }
 }
 
-function createTooltip(tweet: Tweet): string {
+export function createTooltip(tweet: Tweet): string {
   const author = tweet.author
   const metrics = tweet.public_metrics
   const date = new Date(tweet.created_at).toLocaleString()

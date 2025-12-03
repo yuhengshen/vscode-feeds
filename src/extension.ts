@@ -10,12 +10,7 @@ import {
   getTweetDetailPanel,
 } from './twitter'
 import type { Tweet } from './twitter'
-import { useTwitterTimelineView, useTwitterBookmarksView } from './twitter/useTimelineView'
-
-// Tweet tree item interface for command arguments
-interface TweetTreeItemArg {
-  tweet: Tweet
-}
+import { useTwitterTimelineView, useTwitterBookmarksView, type TweetTreeViewNode } from './twitter/useTimelineView'
 
 export = defineExtension(() => {
   logger.info('VS Code Feeds Extension Activated')
@@ -52,7 +47,7 @@ export = defineExtension(() => {
 
   // Generic tweet action handler
   const handleTweetAction = async (
-    item: TweetTreeItemArg | undefined,
+    item: TweetTreeViewNode | undefined,
     action: (tweetId: string) => Promise<unknown>,
     update: (tweet: Tweet) => void,
     successMsg: string,
@@ -87,25 +82,31 @@ export = defineExtension(() => {
     await getTweetDetailPanel().show(tweet)
   })
 
-  useCommand('vscode-feeds.likeTweet', (item: TweetTreeItemArg) =>
+  useCommand('vscode-feeds.likeTweet', (item: TweetTreeViewNode) =>
     handleTweetAction(item, xWebApi.likeTweet.bind(xWebApi), t => t.liked = true, 'Tweet liked!', 'Failed to like tweet')
   )
 
-  useCommand('vscode-feeds.unlikeTweet', (item: TweetTreeItemArg) =>
+  useCommand('vscode-feeds.unlikeTweet', (item: TweetTreeViewNode) =>
     handleTweetAction(item, xWebApi.unlikeTweet.bind(xWebApi), t => t.liked = false, 'Tweet unliked', 'Failed to unlike tweet')
   )
 
-  useCommand('vscode-feeds.bookmarkTweet', (item: TweetTreeItemArg) =>
+  useCommand('vscode-feeds.bookmarkTweet', (item: TweetTreeViewNode) =>
     handleTweetAction(item, xWebApi.bookmarkTweet.bind(xWebApi), t => t.bookmarked = true, 'Tweet bookmarked!', 'Failed to bookmark tweet')
   )
 
-  useCommand('vscode-feeds.removeBookmark', (item: TweetTreeItemArg) =>
+  useCommand('vscode-feeds.removeBookmark', (item: TweetTreeViewNode) =>
     handleTweetAction(item, xWebApi.removeBookmark.bind(xWebApi), t => t.bookmarked = false, 'Bookmark removed', 'Failed to remove bookmark')
   )
 
-  useCommand('vscode-feeds.openInBrowser', (item: TweetTreeItemArg) => {
+  useCommand('vscode-feeds.openInBrowser', (item: TweetTreeViewNode) => {
     if (!item?.tweet) return
     env.openExternal(Uri.parse(`https://x.com/i/status/${item.tweet.id}`))
+  })
+
+  useCommand('vscode-feeds.copyTweetText', async (item: TweetTreeViewNode) => {
+    if (!item?.tweet) return
+    await env.clipboard.writeText(item.tweet.text)
+    window.showInformationMessage('Tweet text copied to clipboard')
   })
 
   useCommand('vscode-feeds.switchToForYou', () => {

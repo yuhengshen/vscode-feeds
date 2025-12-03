@@ -4,7 +4,7 @@
   "displayName": "VS Code Feeds - Twitter/X",
   "description": "View Twitter/X feeds directly in VS Code with image, video support, comments, likes and bookmarks",
   "type": "module",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "icon": "icons.png",
   "categories": [
     "Other"
@@ -110,6 +110,12 @@
         "title": "Switch Timeline Type",
         "icon": "$(list-filter)",
         "category": "Twitter Feeds"
+      },
+      {
+        "command": "vscode-feeds.copyTweetText",
+        "title": "Copy Tweet Text",
+        "icon": "$(copy)",
+        "category": "Twitter Feeds"
       }
     ],
     "viewsContainers": {
@@ -184,6 +190,11 @@
         },
         {
           "command": "vscode-feeds.openInBrowser",
+          "when": "view == twitter-timeline || view == twitter-bookmarks",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-feeds.copyTweetText",
           "when": "view == twitter-timeline || view == twitter-bookmarks",
           "group": "navigation"
         }
