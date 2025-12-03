@@ -73,12 +73,3 @@ jobs:
         run: pnpm exec ovsx publish --no-dependencies
         env:
           OVSX_PAT: ${{ secrets.OVSX_PAT }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.check-version.outputs.version }}
-          name: Release v${{ needs.check-version.outputs.version }}
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
