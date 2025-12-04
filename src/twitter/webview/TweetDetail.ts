@@ -1,6 +1,20 @@
 import { html, nothing } from 'lit-html'
 import type { Tweet, TweetDetail, MediaItem, TwitterUser } from '../types'
 
+// Decode HTML entities in text
+function decodeHtmlEntities(text: string): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+    '&apos;': "'",
+    '&nbsp;': ' ',
+  }
+  return text.replace(/&(?:amp|lt|gt|quot|#39|apos|nbsp);/g, match => entities[match] || match)
+}
+
 // Action handlers interface
 export interface TweetActions {
   like: (tweetId: string) => void
@@ -31,14 +45,17 @@ function formatNumber(num: number): string {
 }
 
 function formatTweetText(text: string) {
+  // First decode HTML entities
+  const decodedText = decodeHtmlEntities(text)
+  
   const parts: Array<{ type: 'text' | 'url' | 'mention' | 'hashtag', value: string }> = []
   const regex = /(https?:\/\/[^\s]+)|(@\w+)|(#\w+)/g
   let lastIndex = 0
   let match: RegExpExecArray | null
 
-  while ((match = regex.exec(text)) !== null) {
+  while ((match = regex.exec(decodedText)) !== null) {
     if (match.index > lastIndex) {
-      parts.push({ type: 'text', value: text.slice(lastIndex, match.index) })
+      parts.push({ type: 'text', value: decodedText.slice(lastIndex, match.index) })
     }
     if (match[1]) {
       parts.push({ type: 'url', value: match[1] })
@@ -50,8 +67,8 @@ function formatTweetText(text: string) {
     lastIndex = regex.lastIndex
   }
   
-  if (lastIndex < text.length) {
-    parts.push({ type: 'text', value: text.slice(lastIndex) })
+  if (lastIndex < decodedText.length) {
+    parts.push({ type: 'text', value: decodedText.slice(lastIndex) })
   }
 
   return parts.map(part => {
