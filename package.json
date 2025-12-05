@@ -58,18 +58,6 @@
         "category": "Twitter Feeds"
       },
       {
-        "command": "vscode-feeds.bookmarkTweet",
-        "title": "Bookmark Tweet",
-        "icon": "$(bookmark)",
-        "category": "Twitter Feeds"
-      },
-      {
-        "command": "vscode-feeds.removeBookmark",
-        "title": "Remove Bookmark",
-        "icon": "$(bookmark-filled)",
-        "category": "Twitter Feeds"
-      },
-      {
         "command": "vscode-feeds.openInBrowser",
         "title": "Open in Browser",
         "icon": "$(link-external)",
@@ -177,16 +165,6 @@
           "command": "vscode-feeds.unlikeTweet",
           "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem == tweet-liked",
           "group": "inline@2"
-        },
-        {
-          "command": "vscode-feeds.bookmarkTweet",
-          "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem =~ /unbookmarked/",
-          "group": "inline@3"
-        },
-        {
-          "command": "vscode-feeds.removeBookmark",
-          "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem =~ /bookmarked/",
-          "group": "inline@3"
         },
         {
           "command": "vscode-feeds.openInBrowser",

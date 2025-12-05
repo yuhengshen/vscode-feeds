@@ -1,8 +1,12 @@
 import { render } from "lit-html";
-import { renderTweet, renderLoading, renderError, setActions } from "./TweetDetail";
+import {
+  renderTweet,
+  renderLoading,
+  renderError,
+  setActions,
+} from "./TweetDetail";
 import { styles } from "./styles";
 import type { TweetDetail } from "../types";
-
 
 const vscode = acquireVsCodeApi();
 
@@ -10,10 +14,9 @@ const vscode = acquireVsCodeApi();
 setActions({
   like: (tweetId) => vscode.postMessage({ type: "like", tweetId }),
   unlike: (tweetId) => vscode.postMessage({ type: "unlike", tweetId }),
-  bookmark: (tweetId) => vscode.postMessage({ type: "bookmark", tweetId }),
-  removeBookmark: (tweetId) => vscode.postMessage({ type: "removeBookmark", tweetId }),
   viewReply: (tweetId) => vscode.postMessage({ type: "viewReply", tweetId }),
-  openExternal: (tweetId) => vscode.postMessage({ type: "openExternal", tweetId }),
+  openExternal: (tweetId) =>
+    vscode.postMessage({ type: "openExternal", tweetId }),
   loadMoreReplies: () => vscode.postMessage({ type: "loadMoreReplies" }),
 });
 
