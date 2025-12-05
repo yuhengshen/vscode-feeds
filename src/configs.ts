@@ -1,10 +1,9 @@
-import { defineConfigs } from 'reactive-vscode'
+import { defineConfigs } from "reactive-vscode";
 
-export const {
-  'twitter.ct0': ct0,
-  'twitter.authToken': authToken,
-} = defineConfigs('vscode-feeds', {
-  'twitter.ct0': String,
-  'twitter.authToken': String,
-})
-
+export const { "twitter.ct0": ct0, "twitter.authToken": authToken } = defineConfigs(
+  "vscode-feeds",
+  {
+    "twitter.ct0": String,
+    "twitter.authToken": String,
+  },
+);

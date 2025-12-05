@@ -197,15 +197,23 @@
   "scripts": {
     "build": "tsdown --env.NODE_ENV production",
     "dev": "tsdown --watch ./src --env.NODE_ENV development",
+    "format": "oxfmt .",
     "typecheck": "tsc --noEmit",
-    "vscode:prepublish": "pnpm run build"
+    "vscode:prepublish": "pnpm run build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*": "oxfmt --no-error-on-unmatched-pattern"
   },
   "devDependencies": {
     "@types/node": "22.x",
     "@types/vscode": "^1.99.0",
     "@types/vscode-webview": "^1.57.5",
     "@vscode/vsce": "^3.7.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "ovsx": "^0.10.7",
+    "oxfmt": "^0.16.0",
     "reactive-vscode": "^0.4.1",
     "tsdown": "^0.16.8",
     "typescript": "^5.9.3"

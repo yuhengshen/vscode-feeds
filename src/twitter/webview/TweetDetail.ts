@@ -4,7 +4,7 @@ import type { Tweet, TweetDetail, MediaItem, TwitterUser } from "../types";
 // Decode HTML entities in text
 function decodeHtmlEntities(text: string): string {
   const entities: Record<string, string> = {
-    "&amp;": "&",
+    "&amp;": "",
     "&lt;": "<",
     "&gt;": ">",
     "&quot;": '"',
@@ -12,10 +12,7 @@ function decodeHtmlEntities(text: string): string {
     "&apos;": "'",
     "&nbsp;": " ",
   };
-  return text.replace(
-    /&(?:amp|lt|gt|quot|#39|apos|nbsp);/g,
-    (match) => entities[match] || match
-  );
+  return text.replace(/&(?:amp|lt|gt|quot|#39|apos|nbsp);/g, (match) => entities[match] || match);
 }
 
 // Action handlers interface
@@ -104,19 +101,19 @@ function formatTweetText(text: string) {
 function renderAuthorHeader(author?: TwitterUser) {
   return html`
     <div class="tweet-header">
-      ${author?.profile_image_url
-        ? html`<img
+      ${
+        author?.profile_image_url
+          ? html`<img
             class="avatar"
             src="${author.profile_image_url}"
             alt="${author.name}"
           />`
-        : html`<div class="avatar"></div>`}
+          : html`<div class="avatar"></div>`
+      }
       <div class="author-info">
         <div class="author-name">
           ${author?.name || "Unknown"}
-          ${author?.verified
-            ? html`<span class="verified-badge">✓</span>`
-            : nothing}
+          ${author?.verified ? html`<span class="verified-badge">✓</span>` : nothing}
         </div>
         <div class="author-username">@${author?.username || "unknown"}</div>
       </div>
@@ -132,22 +129,18 @@ function renderMedia(media: MediaItem[]) {
     media.length === 1
       ? "single"
       : media.length === 2
-      ? "double"
-      : media.length === 3
-      ? "triple"
-      : "quad";
+        ? "double"
+        : media.length === 3
+          ? "triple"
+          : "quad";
 
   return html`
     <div class="media-container">
       <div class="media-grid ${gridClass}">
         ${media.map((item) => {
           if (item.type === "video" || item.type === "animated_gif") {
-            const variants =
-              item.variants?.filter((v) => v.content_type === "video/mp4") ||
-              [];
-            const bestVariant = variants.sort(
-              (a, b) => (b.bit_rate || 0) - (a.bit_rate || 0)
-            )[0];
+            const variants = item.variants?.filter((v) => v.content_type === "video/mp4") || [];
+            const bestVariant = variants.sort((a, b) => (b.bit_rate || 0) - (a.bit_rate || 0))[0];
             const videoUrl = bestVariant?.url || item.preview_image_url;
 
             return html`
@@ -211,11 +204,7 @@ function renderReplyCard(reply: Tweet) {
 }
 
 // Replies section rendering
-function renderReplies(
-  replies: Tweet[],
-  hasMoreReplies?: boolean,
-  loadingMore?: boolean
-) {
+function renderReplies(replies: Tweet[], hasMoreReplies?: boolean, loadingMore?: boolean) {
   if (!replies || replies.length === 0) {
     return html`
       <div class="replies-section">
@@ -229,8 +218,9 @@ function renderReplies(
     <div class="replies-section">
       <div class="replies-header">Replies (${replies.length})</div>
       ${replies.map((reply) => renderReplyCard(reply))}
-      ${hasMoreReplies
-        ? html`
+      ${
+        hasMoreReplies
+          ? html`
             <button
               class="load-more-btn"
               @click=${() => actions.loadMoreReplies()}
@@ -239,7 +229,8 @@ function renderReplies(
               ${loadingMore ? "Loading..." : "Load More Replies"}
             </button>
           `
-        : nothing}
+          : nothing
+      }
     </div>
   `;
 }
@@ -266,15 +257,14 @@ export function renderTweet(tweet: TweetDetail, loadingMore?: boolean) {
 
         <div class="tweet-text">${formatTweetText(tweet.text)}</div>
 
-        ${tweet.media && tweet.media.length > 0
-          ? renderMedia(tweet.media)
-          : nothing}
+        ${tweet.media && tweet.media.length > 0 ? renderMedia(tweet.media) : nothing}
         ${tweet.quoted_tweet ? renderQuotedTweet(tweet.quoted_tweet) : nothing}
 
         <div class="tweet-date">${date}</div>
 
-        ${metrics
-          ? html`
+        ${
+          metrics
+            ? html`
               <div class="tweet-metrics">
                 <div class="metric">
                   <span class="metric-value"
@@ -302,13 +292,13 @@ export function renderTweet(tweet: TweetDetail, loadingMore?: boolean) {
                 </div>
               </div>
             `
-          : nothing}
+            : nothing
+        }
 
         <div class="actions">
           <button
             class="action-btn like ${tweet.liked ? "active" : ""}"
-            @click=${() =>
-              tweet.liked ? actions.unlike(tweet.id) : actions.like(tweet.id)}
+            @click=${() => (tweet.liked ? actions.unlike(tweet.id) : actions.like(tweet.id))}
           >
             ${tweet.liked ? "❤️" : "🤍"} ${tweet.liked ? "Liked" : "Like"}
           </button>

@@ -1,3 +1,3 @@
-import { defineLogger } from 'reactive-vscode'
+import { defineLogger } from "reactive-vscode";
 
-export const logger = defineLogger('vscode-feeds')
+export const logger = defineLogger("vscode-feeds");

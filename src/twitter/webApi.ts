@@ -1,10 +1,4 @@
-import type {
-  MediaItem,
-  TimelineResponse,
-  Tweet,
-  TweetDetail,
-  TwitterUser,
-} from "./types";
+import type { MediaItem, TimelineResponse, Tweet, TweetDetail, TwitterUser } from "./types";
 import { logger } from "../utils";
 
 // X Web GraphQL API endpoints
@@ -111,7 +105,7 @@ export class XWebApiService {
     operationName: string,
     variables: Record<string, unknown>,
     method: "GET" | "POST" = "GET",
-    skipFeatures = false
+    skipFeatures = false,
   ): Promise<T> {
     if (!this.isAuthenticated()) {
       throw new Error("Not authenticated. Please configure your X cookies.");
@@ -157,9 +151,7 @@ export class XWebApiService {
           throw new Error("Authentication failed. Please check your cookies.");
         }
         if (response.status === 404) {
-          throw new Error(
-            `API endpoint not found (404). The query ID may be outdated.`
-          );
+          throw new Error(`API endpoint not found (404). The query ID may be outdated.`);
         }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -180,7 +172,7 @@ export class XWebApiService {
   async getHomeTimeline(
     count: number = 20,
     cursor?: string,
-    seenTweetIds?: string[]
+    seenTweetIds?: string[],
   ): Promise<{ tweets: Tweet[]; cursor?: string }> {
     const variables: Record<string, unknown> = {
       count,
@@ -237,7 +229,7 @@ export class XWebApiService {
   async getHomeLatestTimeline(
     count: number = 20,
     cursor?: string,
-    seenTweetIds?: string[]
+    seenTweetIds?: string[],
   ): Promise<{ tweets: Tweet[]; cursor?: string }> {
     const variables: Record<string, unknown> = {
       count,
@@ -342,8 +334,7 @@ export class XWebApiService {
     let repliesCursor: string | undefined;
 
     // 解析回复和主推文
-    const instructions =
-      data.data.threaded_conversation_with_injections_v2?.instructions || [];
+    const instructions = data.data.threaded_conversation_with_injections_v2?.instructions || [];
     for (const instruction of instructions) {
       if (!instruction.entries) continue;
 
@@ -368,14 +359,9 @@ export class XWebApiService {
         }
 
         // 查找焦点推文（主推文）
-        if (
-          entry.entryId.includes(tweetId) ||
-          entry.entryId.startsWith("tweet-")
-        ) {
+        if (entry.entryId.includes(tweetId) || entry.entryId.startsWith("tweet-")) {
           if (entry.content.itemContent?.tweet_results?.result) {
-            const tweet = this.parseTweet(
-              entry.content.itemContent.tweet_results.result
-            );
+            const tweet = this.parseTweet(entry.content.itemContent.tweet_results.result);
             if (tweet) {
               if (tweet.id === tweetId) {
                 mainTweet = tweet;
@@ -387,17 +373,12 @@ export class XWebApiService {
         }
 
         // 处理对话线程
-        if (
-          entry.entryId.startsWith("conversationthread-") &&
-          entry.content.items
-        ) {
+        if (entry.entryId.startsWith("conversationthread-") && entry.content.items) {
           // 收集线程中的所有推文
           const threadTweets: Tweet[] = [];
           for (const item of entry.content.items) {
             if (item.item?.itemContent?.tweet_results?.result) {
-              const tweet = this.parseTweet(
-                item.item.itemContent.tweet_results.result
-              );
+              const tweet = this.parseTweet(item.item.itemContent.tweet_results.result);
               if (tweet) {
                 threadTweets.push(tweet);
               }
@@ -405,9 +386,7 @@ export class XWebApiService {
           }
 
           // 在线程中查找主推文及其位置
-          const mainTweetIndex = threadTweets.findIndex(
-            (t) => t.id === tweetId
-          );
+          const mainTweetIndex = threadTweets.findIndex((t) => t.id === tweetId);
           if (mainTweetIndex !== -1) {
             mainTweet = threadTweets[mainTweetIndex];
             // 主推文之前的是被回复的推文链
@@ -450,7 +429,7 @@ export class XWebApiService {
    */
   async getMoreReplies(
     tweetId: string,
-    cursor: string
+    cursor: string,
   ): Promise<{ replies: Tweet[]; cursor?: string }> {
     const variables = {
       focalTweetId: tweetId,
@@ -509,19 +488,13 @@ export class XWebApiService {
     const replies: Tweet[] = [];
     let nextCursor: string | undefined;
 
-    const instructions =
-      data.data.threaded_conversation_with_injections_v2?.instructions || [];
+    const instructions = data.data.threaded_conversation_with_injections_v2?.instructions || [];
     for (const instruction of instructions) {
       // 处理 moduleItems（分页加载返回的格式）
-      if (
-        instruction.type === "TimelineAddToModule" &&
-        instruction.moduleItems
-      ) {
+      if (instruction.type === "TimelineAddToModule" && instruction.moduleItems) {
         for (const item of instruction.moduleItems) {
           if (item.item?.itemContent?.tweet_results?.result) {
-            const tweet = this.parseTweet(
-              item.item.itemContent.tweet_results.result
-            );
+            const tweet = this.parseTweet(item.item.itemContent.tweet_results.result);
             if (tweet && tweet.id !== tweetId) {
               replies.push(tweet);
             }
@@ -550,15 +523,10 @@ export class XWebApiService {
         }
 
         // 解析回复
-        if (
-          entry.entryId.startsWith("conversationthread-") &&
-          entry.content.items
-        ) {
+        if (entry.entryId.startsWith("conversationthread-") && entry.content.items) {
           for (const item of entry.content.items) {
             if (item.item?.itemContent?.tweet_results?.result) {
-              const tweet = this.parseTweet(
-                item.item.itemContent.tweet_results.result
-              );
+              const tweet = this.parseTweet(item.item.itemContent.tweet_results.result);
               if (tweet && tweet.id !== tweetId) {
                 replies.push(tweet);
               }
@@ -577,7 +545,7 @@ export class XWebApiService {
    */
   async getBookmarks(
     count: number = 20,
-    cursor?: string
+    cursor?: string,
   ): Promise<{ tweets: Tweet[]; cursor?: string }> {
     const variables: Record<string, unknown> = {
       count,
@@ -611,9 +579,7 @@ export class XWebApiService {
       };
     }>(QUERY_IDS.Bookmarks, "Bookmarks", variables);
 
-    const response = this.parseTimelineResponse(
-      data.data.bookmark_timeline_v2.timeline
-    );
+    const response = this.parseTimelineResponse(data.data.bookmark_timeline_v2.timeline);
     // 标记为已收藏
     response.tweets = response.tweets.map((t) => ({ ...t, bookmarked: true }));
     return response;
@@ -627,7 +593,7 @@ export class XWebApiService {
       QUERY_IDS.FavoriteTweet,
       "FavoriteTweet",
       { tweet_id: tweetId },
-      "POST"
+      "POST",
     );
     return true;
   }
@@ -640,7 +606,7 @@ export class XWebApiService {
       QUERY_IDS.UnfavoriteTweet,
       "UnfavoriteTweet",
       { tweet_id: tweetId },
-      "POST"
+      "POST",
     );
     return true;
   }
@@ -683,19 +649,14 @@ export class XWebApiService {
         }
 
         // 跳过广告条目（entryId 包含 promoted）
-        if (
-          entry.entryId.includes("promoted") ||
-          entry.entryId.includes("Promoted")
-        ) {
+        if (entry.entryId.includes("promoted") || entry.entryId.includes("Promoted")) {
           logger.info("Skipping promoted entry:", entry.entryId);
           continue;
         }
 
         // 解析推文
         if (entry.content.itemContent?.tweet_results?.result) {
-          const tweet = this.parseTweet(
-            entry.content.itemContent.tweet_results.result
-          );
+          const tweet = this.parseTweet(entry.content.itemContent.tweet_results.result);
           if (tweet) {
             tweets.push(tweet);
           }
@@ -755,10 +716,7 @@ export class XWebApiService {
 
     // 检查是否有必要的数据
     if (!tweetData || !tweetData.legacy) {
-      logger.warn(
-        "Tweet data or legacy is missing, skipping:",
-        result.__typename
-      );
+      logger.warn("Tweet data or legacy is missing, skipping:", result.__typename);
       return null;
     }
 
@@ -783,19 +741,11 @@ export class XWebApiService {
     // 解析用户信息
     if (user) {
       tweet.author = {
-        id:
-          user.id_str ||
-          tweetData.core?.user_results?.result?.rest_id ||
-          "unknown",
+        id: user.id_str || tweetData.core?.user_results?.result?.rest_id || "unknown",
         name: user.name,
         username: user.screen_name,
-        profile_image_url: user.profile_image_url_https?.replace(
-          "_normal",
-          "_400x400"
-        ),
-        verified:
-          user.verified ||
-          tweetData.core?.user_results?.result?.is_blue_verified,
+        profile_image_url: user.profile_image_url_https?.replace("_normal", "_400x400"),
+        verified: user.verified || tweetData.core?.user_results?.result?.is_blue_verified,
         description: user.description,
       };
     }
@@ -805,12 +755,7 @@ export class XWebApiService {
       tweet.media = legacy.extended_entities.media.map(
         (m: RawMedia): MediaItem => ({
           media_key: m.id_str,
-          type:
-            m.type === "photo"
-              ? "photo"
-              : m.type === "animated_gif"
-              ? "animated_gif"
-              : "video",
+          type: m.type === "photo" ? "photo" : m.type === "animated_gif" ? "animated_gif" : "video",
           url: m.media_url_https,
           preview_image_url: m.media_url_https,
           width: m.original_info?.width,
@@ -820,18 +765,16 @@ export class XWebApiService {
               bit_rate: v.bitrate,
               content_type: v.content_type,
               url: v.url,
-            })
+            }),
           ),
           alt_text: m.ext_alt_text,
-        })
+        }),
       );
     }
 
     // 解析引用的推文
     if (tweetData.quoted_status_result?.result) {
-      const quotedTweet = this.parseTweet(
-        tweetData.quoted_status_result.result
-      );
+      const quotedTweet = this.parseTweet(tweetData.quoted_status_result.result);
       if (quotedTweet) {
         tweet.quoted_tweet = quotedTweet;
       }

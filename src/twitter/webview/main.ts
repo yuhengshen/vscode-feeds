@@ -1,10 +1,5 @@
 import { render } from "lit-html";
-import {
-  renderTweet,
-  renderLoading,
-  renderError,
-  setActions,
-} from "./TweetDetail";
+import { renderTweet, renderLoading, renderError, setActions } from "./TweetDetail";
 import { styles } from "./styles";
 import type { TweetDetail } from "../types";
 
@@ -15,8 +10,7 @@ setActions({
   like: (tweetId) => vscode.postMessage({ type: "like", tweetId }),
   unlike: (tweetId) => vscode.postMessage({ type: "unlike", tweetId }),
   viewReply: (tweetId) => vscode.postMessage({ type: "viewReply", tweetId }),
-  openExternal: (tweetId) =>
-    vscode.postMessage({ type: "openExternal", tweetId }),
+  openExternal: (tweetId) => vscode.postMessage({ type: "openExternal", tweetId }),
   loadMoreReplies: () => vscode.postMessage({ type: "loadMoreReplies" }),
 });
 

@@ -20,20 +20,12 @@ export = defineExtension(() => {
         ct0: ct0.value,
         authToken: authToken.value,
       });
-      commands.executeCommand(
-        "setContext",
-        "vscode-feeds.isAuthenticated",
-        true
-      );
+      commands.executeCommand("setContext", "vscode-feeds.isAuthenticated", true);
       logger.info("Using X Web Cookie credentials");
       return;
     }
     xWebApi.clearCredentials();
-    commands.executeCommand(
-      "setContext",
-      "vscode-feeds.isAuthenticated",
-      false
-    );
+    commands.executeCommand("setContext", "vscode-feeds.isAuthenticated", false);
   };
 
   // Watch for credential changes
@@ -57,7 +49,7 @@ export = defineExtension(() => {
     action: (tweetId: string) => Promise<unknown>,
     update: (tweet: Tweet) => void,
     successMsg: string,
-    errorMsg: string
+    errorMsg: string,
   ) => {
     if (!item?.tweet) return;
     try {
@@ -93,8 +85,8 @@ export = defineExtension(() => {
       xWebApi.likeTweet.bind(xWebApi),
       (t) => (t.liked = true),
       "Tweet liked!",
-      "Failed to like tweet"
-    )
+      "Failed to like tweet",
+    ),
   );
 
   useCommand("vscode-feeds.unlikeTweet", (item: TweetTreeViewNode) =>
@@ -103,8 +95,8 @@ export = defineExtension(() => {
       xWebApi.unlikeTweet.bind(xWebApi),
       (t) => (t.liked = false),
       "Tweet unliked",
-      "Failed to unlike tweet"
-    )
+      "Failed to unlike tweet",
+    ),
   );
 
   useCommand("vscode-feeds.openInBrowser", (item: TweetTreeViewNode) => {
@@ -165,7 +157,7 @@ export = defineExtension(() => {
       } catch (error) {
         window.showErrorMessage(`Failed to load more: ${error}`);
       }
-    }
+    },
   );
 
   useCommand("vscode-feeds.authenticate", async () => {
@@ -176,14 +168,11 @@ export = defineExtension(() => {
         "2. Open DevTools (F12) > Application > Cookies\n" +
         '3. Copy the values of "ct0" and "auth_token"',
       "Open Settings",
-      "Open X.com"
+      "Open X.com",
     );
 
     if (result === "Open Settings") {
-      commands.executeCommand(
-        "workbench.action.openSettings",
-        "vscode-feeds.twitter"
-      );
+      commands.executeCommand("workbench.action.openSettings", "vscode-feeds.twitter");
     } else if (result === "Open X.com") {
       env.openExternal(Uri.parse("https://x.com"));
     }
@@ -191,18 +180,12 @@ export = defineExtension(() => {
 
   useCommand("vscode-feeds.logout", async () => {
     // 清除配置
-    const config = await import("vscode").then((v) =>
-      v.workspace.getConfiguration("vscode-feeds")
-    );
+    const config = await import("vscode").then((v) => v.workspace.getConfiguration("vscode-feeds"));
     await config.update("twitter.ct0", "", true);
     await config.update("twitter.authToken", "", true);
 
     xWebApi.clearCredentials();
-    commands.executeCommand(
-      "setContext",
-      "vscode-feeds.isAuthenticated",
-      false
-    );
+    commands.executeCommand("setContext", "vscode-feeds.isAuthenticated", false);
     timeline.refresh();
     bookmarks.refresh();
     window.showInformationMessage("Logged out from X");

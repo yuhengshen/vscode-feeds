@@ -11,12 +11,7 @@ function getWebviewContent(webview: WebviewPanel["webview"]): string {
   }
 
   const scriptUri = webview.asWebviewUri(
-    Uri.joinPath(
-      extensionContext.value.extensionUri,
-      "dist",
-      "webview",
-      "main.iife.js"
-    )
+    Uri.joinPath(extensionContext.value.extensionUri, "dist", "webview", "main.iife.js"),
   );
 
   return `
@@ -58,7 +53,7 @@ export function useTweetDetailPanel() {
   async function handleTweetAction<T>(
     action: () => Promise<T>,
     onSuccess: (result: T) => void,
-    errorMsg: string
+    errorMsg: string,
   ) {
     try {
       const result = await action();
@@ -70,8 +65,10 @@ export function useTweetDetailPanel() {
 
   // 加载更多回复
   async function fetchMoreReplies(tweetId: string, cursor: string) {
-    const { replies: moreReplies, cursor: nextCursor } =
-      await xWebApi.getMoreReplies(tweetId, cursor);
+    const { replies: moreReplies, cursor: nextCursor } = await xWebApi.getMoreReplies(
+      tweetId,
+      cursor,
+    );
     return { moreReplies, nextCursor };
   }
 
@@ -82,17 +79,12 @@ export function useTweetDetailPanel() {
 
     return (
       tweet.replies?.find((r) => r.id === tweetId) ||
-      (tweet.reply_to_tweet?.id === tweetId
-        ? tweet.reply_to_tweet
-        : undefined) ||
+      (tweet.reply_to_tweet?.id === tweetId ? tweet.reply_to_tweet : undefined) ||
       (tweet.quoted_tweet?.id === tweetId ? tweet.quoted_tweet : undefined)
     );
   }
 
-  async function handleMessage(message: {
-    type: string;
-    tweetId?: string;
-  }): Promise<void> {
+  async function handleMessage(message: { type: string; tweetId?: string }): Promise<void> {
     const { type, tweetId } = message;
 
     switch (type) {
@@ -101,7 +93,7 @@ export function useTweetDetailPanel() {
           await handleTweetAction(
             () => xWebApi.likeTweet(tweetId),
             () => updateTweet({ liked: true }),
-            "Failed to like tweet"
+            "Failed to like tweet",
           );
         }
         break;
@@ -111,7 +103,7 @@ export function useTweetDetailPanel() {
           await handleTweetAction(
             () => xWebApi.unlikeTweet(tweetId),
             () => updateTweet({ liked: false }),
-            "Failed to unlike tweet"
+            "Failed to unlike tweet",
           );
         }
         break;
@@ -131,7 +123,7 @@ export function useTweetDetailPanel() {
             postMessage({ type: "loadingMore" });
             const { moreReplies, nextCursor } = await fetchMoreReplies(
               currentTweet.value.id,
-              currentTweet.value.repliesCursor
+              currentTweet.value.repliesCursor,
             );
             updateTweet({
               replies: [...(currentTweet.value.replies || []), ...moreReplies],
@@ -148,9 +140,7 @@ export function useTweetDetailPanel() {
 
       case "openExternal":
         if (tweetId) {
-          env.openExternal(
-            Uri.parse(`https://twitter.com/i/status/${tweetId}`)
-          );
+          env.openExternal(Uri.parse(`https://twitter.com/i/status/${tweetId}`));
         }
         break;
     }
@@ -169,7 +159,7 @@ export function useTweetDetailPanel() {
         {
           enableScripts: true,
           retainContextWhenHidden: true,
-        }
+        },
       );
 
       // Set HTML content
@@ -213,14 +203,11 @@ export function useTweetDetailPanel() {
         try {
           const { moreReplies, nextCursor } = await fetchMoreReplies(
             tweetDetail.id,
-            tweetDetail.repliesCursor
+            tweetDetail.repliesCursor,
           );
           // 合并回复
           if (moreReplies.length > 0) {
-            tweetDetail.replies = [
-              ...(tweetDetail.replies || []),
-              ...moreReplies,
-            ];
+            tweetDetail.replies = [...(tweetDetail.replies || []), ...moreReplies];
           }
           // 根据是否有下一页 cursor 决定是否显示加载更多按钮
           tweetDetail.repliesCursor = nextCursor;
@@ -264,8 +251,7 @@ export function useTweetDetailPanel() {
 }
 
 // Singleton instance for global access
-let tweetDetailPanelInstance: ReturnType<typeof useTweetDetailPanel> | null =
-  null;
+let tweetDetailPanelInstance: ReturnType<typeof useTweetDetailPanel> | null = null;
 
 export function getTweetDetailPanel(): ReturnType<typeof useTweetDetailPanel> {
   if (!tweetDetailPanelInstance) {
