@@ -152,10 +152,6 @@ export const styles = `
     background: #e0245e;
     color: white;
   }
-  .action-btn.bookmark.active {
-    background: #1da1f2;
-    color: white;
-  }
   
   /* Quoted Tweet */
   .quoted-tweet {

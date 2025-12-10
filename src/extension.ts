@@ -4,11 +4,7 @@ import { ct0, authToken } from "./configs";
 import { logger } from "./utils";
 import { xWebApi, getTweetDetailPanel } from "./twitter";
 import type { Tweet } from "./twitter";
-import {
-  useTwitterTimelineView,
-  useTwitterBookmarksView,
-  type TweetTreeViewNode,
-} from "./twitter/useTimelineView";
+import { useTwitterTimelineView, type TweetTreeViewNode } from "./twitter/useTimelineView";
 
 export = defineExtension(() => {
   logger.info("VS Code Feeds Extension Activated");
@@ -35,12 +31,10 @@ export = defineExtension(() => {
 
   // Create reactive tree views
   const timeline = useTwitterTimelineView();
-  const bookmarks = useTwitterBookmarksView();
 
-  // Helper to update tweet in both views
+  // Helper to update tweet
   const updateTweetInViews = (tweet: Tweet) => {
     timeline.updateTweet(tweet);
-    bookmarks.updateTweet(tweet);
   };
 
   // Generic tweet action handler
@@ -66,7 +60,6 @@ export = defineExtension(() => {
   useCommand("vscode-feeds.refreshTimeline", () => {
     logger.info("Refreshing timeline...");
     timeline.refresh();
-    bookmarks.refresh();
     window.showInformationMessage("Timeline refreshed");
   });
 
@@ -145,21 +138,6 @@ export = defineExtension(() => {
     }
   });
 
-  useCommand(
-    "vscode-feeds.loadMore",
-    async (viewType: "timeline" | "bookmarks", _nextToken: string) => {
-      try {
-        if (viewType === "timeline") {
-          await timeline.loadMore();
-        } else {
-          await bookmarks.loadMore();
-        }
-      } catch (error) {
-        window.showErrorMessage(`Failed to load more: ${error}`);
-      }
-    },
-  );
-
   useCommand("vscode-feeds.authenticate", async () => {
     // 引导用户设置 cookies
     const result = await window.showInformationMessage(
@@ -187,7 +165,6 @@ export = defineExtension(() => {
     xWebApi.clearCredentials();
     commands.executeCommand("setContext", "vscode-feeds.isAuthenticated", false);
     timeline.refresh();
-    bookmarks.refresh();
     window.showInformationMessage("Logged out from X");
   });
 

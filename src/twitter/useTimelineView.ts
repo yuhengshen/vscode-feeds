@@ -30,7 +30,6 @@ function createTweetTreeItem(tweet: Tweet, viewType: ViewType): TweetTreeViewNod
   }
 
   const liked = tweet.liked ? "liked" : "unliked";
-  const bookmarked = tweet.bookmarked ? "bookmarked" : "unbookmarked";
 
   return {
     tweet, // Expose tweet for context menu commands
@@ -44,7 +43,7 @@ function createTweetTreeItem(tweet: Tweet, viewType: ViewType): TweetTreeViewNod
         : hasMedia
           ? new ThemeIcon("file-media")
           : new ThemeIcon("comment"),
-      contextValue: `tweet-${liked}-${bookmarked}`,
+      contextValue: `tweet-${liked}`,
       collapsibleState: TreeItemCollapsibleState.None,
       command: {
         command: "vscode-feeds.viewTweet",
@@ -73,22 +72,6 @@ export function createTooltip(tweet: Tweet): string {
   }
 
   return tooltip;
-}
-
-function createLoadMoreNode(cursor: string, viewType: ViewType): TreeViewNode {
-  return {
-    treeItem: {
-      id: `loadmore-${viewType}`,
-      label: "Load More...",
-      iconPath: new ThemeIcon("arrow-down"),
-      collapsibleState: TreeItemCollapsibleState.None,
-      command: {
-        command: "vscode-feeds.loadMore",
-        title: "Load More",
-        arguments: [viewType, cursor],
-      },
-    },
-  };
 }
 
 function createAuthPromptNode(): TreeViewNode {
@@ -144,10 +127,7 @@ export function useTimelineProvider(viewType: ViewType) {
     isAuthenticated.value = xWebApi.isAuthenticated();
   };
 
-  async function fetchTweets(
-    paginationCursor?: string,
-    isLoadMore: boolean = false,
-  ): Promise<void> {
+  async function fetchTweets(paginationCursor?: string): Promise<void> {
     if (loading.value) return;
 
     checkAuth();
@@ -161,21 +141,13 @@ export function useTimelineProvider(viewType: ViewType) {
       // 传递上一次请求返回的推文ID
       const seenIds = lastSeenTweetIds.value;
 
-      if (viewType === "bookmarks") {
-        response = await xWebApi.getBookmarks(20, paginationCursor);
-      } else if (timelineType.value === "following") {
+      if (timelineType.value === "following") {
         response = await xWebApi.getHomeLatestTimeline(20, paginationCursor, seenIds);
       } else {
         response = await xWebApi.getHomeTimeline(20, paginationCursor, seenIds);
       }
 
-      if (isLoadMore) {
-        // 加载更多时，追加到后面
-        tweets.value = [...tweets.value, ...response.tweets];
-      } else {
-        // 首次加载或刷新，直接替换
-        tweets.value = response.tweets;
-      }
+      tweets.value = response.tweets;
 
       // 记录本次返回的推文ID，供下次请求使用
       lastSeenTweetIds.value = response.tweets.map((t) => t.id);
@@ -196,12 +168,7 @@ export function useTimelineProvider(viewType: ViewType) {
     error.value = undefined;
     checkAuth();
     // 刷新时传递当前 cursor，但替换内容而不是拼接
-    fetchTweets(cursor.value, false);
-  }
-
-  async function loadMore(): Promise<void> {
-    if (loading.value || !cursor.value) return;
-    await fetchTweets(cursor.value, true);
+    fetchTweets(cursor.value);
   }
 
   function setTimelineType(type: TimelineType): void {
@@ -242,11 +209,6 @@ export function useTimelineProvider(viewType: ViewType) {
 
     const nodes: TreeViewNode[] = tweets.value.map((tweet) => createTweetTreeItem(tweet, viewType));
 
-    // Add load more node if there are more tweets
-    if (cursor.value) {
-      nodes.push(createLoadMoreNode(cursor.value, viewType));
-    }
-
     return nodes;
   });
 
@@ -263,7 +225,6 @@ export function useTimelineProvider(viewType: ViewType) {
     error,
     timelineType,
     refresh,
-    loadMore,
     setTimelineType,
     getTimelineType,
     updateTweet,
@@ -275,19 +236,6 @@ export function useTwitterTimelineView() {
   const provider = useTimelineProvider("timeline");
 
   const view = useTreeView("twitter-timeline", provider.treeData, {
-    showCollapseAll: false,
-  });
-
-  return {
-    view,
-    ...provider,
-  };
-}
-
-export function useTwitterBookmarksView() {
-  const provider = useTimelineProvider("bookmarks");
-
-  const view = useTreeView("twitter-bookmarks", provider.treeData, {
     showCollapseAll: false,
   });
 

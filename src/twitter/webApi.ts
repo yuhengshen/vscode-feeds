@@ -12,7 +12,6 @@ const QUERY_IDS = {
   HomeLatestTimeline: "BKB7oi212Fi7kQtCBGE4zA",
   UserTweets: "q6xj5bs0hapm9309hexA_g",
   TweetDetail: "xd_EMdYvB9hfZsZ6Idri0w",
-  Bookmarks: "2neUNDqrrFzbLui8yallcQ",
   FavoriteTweet: "lI07N6Otwv1PhnEgXILM7A",
   UnfavoriteTweet: "ZYKSe-w7KEslx3JhSIk5LA",
   UserByScreenName: "1VOOyvKkiI3FMmkeDNxM9A",
@@ -541,51 +540,6 @@ export class XWebApiService {
   }
 
   /**
-   * 获取收藏
-   */
-  async getBookmarks(
-    count: number = 20,
-    cursor?: string,
-  ): Promise<{ tweets: Tweet[]; cursor?: string }> {
-    const variables: Record<string, unknown> = {
-      count,
-      includePromotedContent: false,
-    };
-
-    if (cursor) {
-      variables.cursor = cursor;
-    }
-
-    const data = await this.graphqlRequest<{
-      data: {
-        bookmark_timeline_v2: {
-          timeline: {
-            instructions: Array<{
-              type: string;
-              entries?: Array<{
-                entryId: string;
-                content: {
-                  itemContent?: {
-                    tweet_results?: {
-                      result: RawTweetResult;
-                    };
-                  };
-                  value?: string;
-                };
-              }>;
-            }>;
-          };
-        };
-      };
-    }>(QUERY_IDS.Bookmarks, "Bookmarks", variables);
-
-    const response = this.parseTimelineResponse(data.data.bookmark_timeline_v2.timeline);
-    // 标记为已收藏
-    response.tweets = response.tweets.map((t) => ({ ...t, bookmarked: true }));
-    return response;
-  }
-
-  /**
    * 点赞推文
    */
   async likeTweet(tweetId: string): Promise<boolean> {
@@ -735,7 +689,6 @@ export class XWebApiService {
         quote_count: legacy.quote_count || 0,
       },
       liked: legacy.favorited,
-      bookmarked: legacy.bookmarked,
     };
 
     // 解析用户信息
@@ -860,7 +813,6 @@ interface RawTweetResult {
     favorite_count: number;
     quote_count: number;
     favorited?: boolean;
-    bookmarked?: boolean;
     in_reply_to_status_id_str?: string;
     extended_entities?: {
       media: RawMedia[];

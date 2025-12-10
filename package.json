@@ -2,9 +2,9 @@
   "publisher": "yuhengshen",
   "name": "vscode-feeds",
   "displayName": "VS Code Feeds - Twitter/X",
-  "description": "View Twitter/X feeds directly in VS Code with image, video support, comments, likes and bookmarks",
+  "description": "View Twitter/X feeds directly in VS Code with image, video support, comments and likes",
   "type": "module",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "icon": "icons.png",
   "categories": [
     "Other"
@@ -76,12 +76,6 @@
         "category": "Twitter Feeds"
       },
       {
-        "command": "vscode-feeds.loadMore",
-        "title": "Load More Tweets",
-        "icon": "$(arrow-down)",
-        "category": "Twitter Feeds"
-      },
-      {
         "command": "vscode-feeds.switchToForYou",
         "title": "Switch to For You",
         "icon": "$(star)",
@@ -121,11 +115,6 @@
           "id": "twitter-timeline",
           "name": "Timeline",
           "icon": "$(home)"
-        },
-        {
-          "id": "twitter-bookmarks",
-          "name": "Bookmarks",
-          "icon": "$(bookmark)"
         }
       ]
     },
@@ -138,7 +127,7 @@
         },
         {
           "command": "vscode-feeds.refreshTimeline",
-          "when": "view == twitter-timeline || view == twitter-bookmarks",
+          "when": "view == twitter-timeline",
           "group": "navigation"
         },
         {
@@ -153,27 +142,27 @@
       "view/item/context": [
         {
           "command": "vscode-feeds.viewTweet",
-          "when": "view == twitter-timeline || view == twitter-bookmarks",
+          "when": "view == twitter-timeline",
           "group": "inline@1"
         },
         {
           "command": "vscode-feeds.likeTweet",
-          "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem == tweet-unliked",
+          "when": "view == twitter-timeline && viewItem == tweet-unliked",
           "group": "inline@2"
         },
         {
           "command": "vscode-feeds.unlikeTweet",
-          "when": "(view == twitter-timeline || view == twitter-bookmarks) && viewItem == tweet-liked",
+          "when": "view == twitter-timeline && viewItem == tweet-liked",
           "group": "inline@2"
         },
         {
           "command": "vscode-feeds.openInBrowser",
-          "when": "view == twitter-timeline || view == twitter-bookmarks",
+          "when": "view == twitter-timeline",
           "group": "navigation"
         },
         {
           "command": "vscode-feeds.copyTweetText",
-          "when": "view == twitter-timeline || view == twitter-bookmarks",
+          "when": "view == twitter-timeline",
           "group": "navigation"
         }
       ]

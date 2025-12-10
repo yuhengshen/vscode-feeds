@@ -64,7 +64,6 @@ export interface Tweet {
 
   // Local state
   liked?: boolean;
-  bookmarked?: boolean;
 }
 
 export interface TweetDetail extends Tweet {
@@ -99,4 +98,4 @@ export interface AuthCredentials {
   oauth2RefreshToken?: string;
 }
 
-export type ViewType = "timeline" | "bookmarks" | "tweet-detail";
+export type ViewType = "timeline" | "tweet-detail";
