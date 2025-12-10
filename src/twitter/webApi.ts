@@ -1,9 +1,8 @@
-import type { MediaItem, TimelineResponse, Tweet, TweetDetail, TwitterUser } from "./types";
+import type { MediaItem, Tweet, TweetDetail } from "./types";
 import { logger } from "../utils";
 
 // X Web GraphQL API endpoints
 const X_GRAPHQL_BASE = "https://x.com/i/api/graphql";
-const X_API_BASE = "https://x.com/i/api";
 
 // GraphQL query IDs (these may change, need to be updated periodically)
 // 可以从 X 网页版的网络请求中获取最新的 query ID
@@ -15,12 +14,14 @@ const QUERY_IDS = {
   FavoriteTweet: "lI07N6Otwv1PhnEgXILM7A",
   UnfavoriteTweet: "ZYKSe-w7KEslx3JhSIk5LA",
   UserByScreenName: "1VOOyvKkiI3FMmkeDNxM9A",
+  Likes: "I9w8GfWYSc6gIt4k5CVfSg",
 };
 
 // 默认的 GraphQL 变量和特性
 const DEFAULT_FEATURES = {
   rweb_video_screen_enabled: false,
   profile_label_improvements_pcf_label_in_post_enabled: true,
+  responsive_web_profile_redirect_enabled: false,
   rweb_tipjar_consumption_enabled: true,
   responsive_web_graphql_exclude_directive_enabled: true,
   verified_phone_label_enabled: false,
@@ -32,7 +33,7 @@ const DEFAULT_FEATURES = {
   c9s_tweet_anatomy_moderator_badge_enabled: true,
   responsive_web_grok_analyze_button_fetch_trends_enabled: false,
   responsive_web_grok_analyze_post_followups_enabled: true,
-  responsive_web_jetfuel_frame: false,
+  responsive_web_jetfuel_frame: true,
   responsive_web_grok_share_attachment_enabled: true,
   articles_preview_enabled: true,
   responsive_web_edit_tweet_api_enabled: true,
@@ -42,7 +43,7 @@ const DEFAULT_FEATURES = {
   responsive_web_twitter_article_tweet_consumption_enabled: true,
   tweet_awards_web_tipping_enabled: false,
   responsive_web_grok_show_grok_translated_post: false,
-  responsive_web_grok_analysis_button_from_backend: false,
+  responsive_web_grok_analysis_button_from_backend: true,
   creator_subscriptions_quote_tweet_preview_enabled: false,
   freedom_of_speech_not_reach_fetch_enabled: true,
   standardized_nudges_misinfo: true,
@@ -50,12 +51,15 @@ const DEFAULT_FEATURES = {
   longform_notetweets_rich_text_read_enabled: true,
   longform_notetweets_inline_media_enabled: true,
   responsive_web_grok_image_annotation_enabled: true,
+  responsive_web_grok_imagine_annotation_enabled: true,
+  responsive_web_grok_community_note_auto_translation_is_enabled: false,
   responsive_web_enhance_cards_enabled: false,
 };
 
 export interface WebCredentials {
   ct0: string; // CSRF token
   authToken: string; // auth_token cookie
+  twid?: string; // twid cookie containing user ID
 }
 
 export class XWebApiService {
@@ -64,7 +68,20 @@ export class XWebApiService {
 
   setCredentials(credentials: WebCredentials) {
     this.credentials = credentials;
-    this.userId = null; // 重置缓存的用户ID
+    // 从 twid 中解析用户 ID
+    if (credentials.twid) {
+      const twid = credentials.twid;
+      // twid 格式: u%3D{userId} 或 u={userId} 或直接是 userId
+      if (twid.includes("u%3D")) {
+        this.userId = twid.split("u%3D")[1];
+      } else if (twid.includes("u=")) {
+        this.userId = twid.split("u=")[1];
+      } else {
+        this.userId = twid;
+      }
+    } else {
+      this.userId = null;
+    }
   }
 
   clearCredentials() {
@@ -81,11 +98,16 @@ export class XWebApiService {
       throw new Error("Not authenticated");
     }
 
+    let cookieStr = `auth_token=${this.credentials.authToken}; ct0=${this.credentials.ct0}`;
+    if (this.credentials.twid) {
+      cookieStr += `; twid=${this.credentials.twid}`;
+    }
+
     return {
       Authorization:
         "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA",
       "Content-Type": "application/json",
-      Cookie: `auth_token=${this.credentials.authToken}; ct0=${this.credentials.ct0}`,
+      Cookie: cookieStr,
       "X-Csrf-Token": this.credentials.ct0,
       "X-Twitter-Auth-Type": "OAuth2Session",
       "X-Twitter-Active-User": "yes",
@@ -566,6 +588,50 @@ export class XWebApiService {
   }
 
   /**
+   * 获取当前用户的点赞列表
+   * @param count 获取数量
+   * @param cursor 分页游标
+   */
+  async getLikes(
+    count: number = 20,
+    cursor?: string,
+  ): Promise<{ tweets: Tweet[]; cursor?: string }> {
+    // 先获取当前登录用户的 ID
+    const userId = this.userId;
+    if (!userId) {
+      throw new Error("Failed to get current user ID");
+    }
+
+    const variables: Record<string, unknown> = {
+      userId,
+      count,
+      includePromotedContent: false,
+      withClientEventToken: false,
+      withBirdwatchNotes: false,
+      withVoice: true,
+    };
+
+    if (cursor) {
+      variables.cursor = cursor;
+    }
+
+    const data = await this.graphqlRequest<LikesApiResponse>(QUERY_IDS.Likes, "Likes", variables);
+    // Likes API 响应结构: data.user.result.timeline.timeline
+    const timeline = data?.data?.user?.result?.timeline?.timeline;
+    if (!timeline) {
+      throw new Error("Unexpected Likes API response: timeline is undefined");
+    }
+    return this.parseTimelineResponse(timeline);
+  }
+
+  /**
+   * 设置当前用户 ID（外部设置，避免 API 调用）
+   */
+  setUserId(userId: string): void {
+    this.userId = userId;
+  }
+
+  /**
    * 解析时间线响应
    */
   private parseTimelineResponse(timeline: {
@@ -675,7 +741,15 @@ export class XWebApiService {
     }
 
     const legacy = tweetData.legacy;
-    const user = tweetData.core?.user_results?.result?.legacy;
+    // 获取用户信息 - 支持多种可能的数据路径
+    const userResult = tweetData.core?.user_results?.result;
+    // Likes API 返回的用户信息在 userResult.core 而不是 userResult.legacy
+    const userLegacy = userResult?.legacy;
+    const userCore = (
+      userResult as {
+        core?: { name?: string; screen_name?: string; created_at?: string };
+      }
+    )?.core;
 
     const tweet: Tweet = {
       id: legacy.id_str,
@@ -691,15 +765,17 @@ export class XWebApiService {
       liked: legacy.favorited,
     };
 
-    // 解析用户信息
-    if (user) {
+    // 解析用户信息 - 优先使用 legacy，fallback 到 core
+    if (userLegacy?.name || userCore?.name) {
+      const userName = userLegacy?.name || userCore?.name || "Unknown";
+      const userScreenName = userLegacy?.screen_name || userCore?.screen_name || "unknown";
       tweet.author = {
-        id: user.id_str || tweetData.core?.user_results?.result?.rest_id || "unknown",
-        name: user.name,
-        username: user.screen_name,
-        profile_image_url: user.profile_image_url_https?.replace("_normal", "_400x400"),
-        verified: user.verified || tweetData.core?.user_results?.result?.is_blue_verified,
-        description: user.description,
+        id: userLegacy?.id_str || userResult?.rest_id || "unknown",
+        name: userName,
+        username: userScreenName,
+        profile_image_url: userLegacy?.profile_image_url_https?.replace("_normal", "_400x400"),
+        verified: userLegacy?.verified || userResult?.is_blue_verified,
+        description: userLegacy?.description,
       };
     }
 
@@ -836,6 +912,39 @@ interface RawMedia {
     }>;
   };
   ext_alt_text?: string;
+}
+
+// Timeline instruction 类型
+interface TimelineInstruction {
+  type: string;
+  entries?: Array<{
+    entryId: string;
+    sortIndex?: string;
+    content: {
+      entryType?: string;
+      itemContent?: {
+        tweet_results?: {
+          result: RawTweetResult;
+        };
+      };
+      value?: string;
+    };
+  }>;
+}
+
+// Likes API 响应类型
+interface LikesApiResponse {
+  data?: {
+    user?: {
+      result?: {
+        timeline?: {
+          timeline?: {
+            instructions: TimelineInstruction[];
+          };
+        };
+      };
+    };
+  };
 }
 
 // 单例

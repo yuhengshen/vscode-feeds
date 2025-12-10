@@ -98,4 +98,4 @@ export interface AuthCredentials {
   oauth2RefreshToken?: string;
 }
 
-export type ViewType = "timeline" | "tweet-detail";
+export type ViewType = "timeline" | "tweet-detail" | "likes";

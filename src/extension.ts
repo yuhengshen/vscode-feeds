@@ -1,10 +1,11 @@
 import { defineExtension, useCommand, watchEffect } from "reactive-vscode";
 import { commands, env, Uri, window } from "vscode";
-import { ct0, authToken } from "./configs";
+import { ct0, authToken, twid } from "./configs";
 import { logger } from "./utils";
 import { xWebApi, getTweetDetailPanel } from "./twitter";
 import type { Tweet } from "./twitter";
 import { useTwitterTimelineView, type TweetTreeViewNode } from "./twitter/useTimelineView";
+import { useTwitterLikesView } from "./twitter/useLikesView";
 
 export = defineExtension(() => {
   logger.info("VS Code Feeds Extension Activated");
@@ -15,6 +16,7 @@ export = defineExtension(() => {
       xWebApi.setCredentials({
         ct0: ct0.value,
         authToken: authToken.value,
+        twid: twid.value,
       });
       commands.executeCommand("setContext", "vscode-feeds.isAuthenticated", true);
       logger.info("Using X Web Cookie credentials");
@@ -31,10 +33,12 @@ export = defineExtension(() => {
 
   // Create reactive tree views
   const timeline = useTwitterTimelineView();
+  const likes = useTwitterLikesView();
 
   // Helper to update tweet
   const updateTweetInViews = (tweet: Tweet) => {
     timeline.updateTweet(tweet);
+    likes.updateTweet(tweet);
   };
 
   // Generic tweet action handler
@@ -86,7 +90,11 @@ export = defineExtension(() => {
     handleTweetAction(
       item,
       xWebApi.unlikeTweet.bind(xWebApi),
-      (t) => (t.liked = false),
+      (t) => {
+        t.liked = false;
+        // Remove from likes view when unliked
+        likes.removeTweet(t.id);
+      },
       "Tweet unliked",
       "Failed to unlike tweet",
     ),
@@ -111,6 +119,12 @@ export = defineExtension(() => {
   useCommand("vscode-feeds.switchToFollowing", () => {
     timeline.setTimelineType("following");
     window.showInformationMessage("Switched to Following timeline");
+  });
+
+  useCommand("vscode-feeds.refreshLikes", () => {
+    logger.info("Refreshing likes...");
+    likes.refresh();
+    window.showInformationMessage("Likes refreshed");
   });
 
   useCommand("vscode-feeds.toggleTimelineType", async () => {
